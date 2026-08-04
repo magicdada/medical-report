@@ -11,7 +11,7 @@ export default {
         ink: "hsl(224 26% 14%)",
       },
       boxShadow: {
-        panel: "0 1px 2px rgb(15 23 42 / 0.06)",
+        panel: "0 12px 30px rgb(15 23 42 / 0.06)",
       },
     },
   },

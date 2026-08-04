@@ -15,16 +15,16 @@ export function Card<T extends ElementType = "div">({
 
   return (
     <Component
-      className={cn("rounded-lg border border-border bg-surface shadow-panel", className)}
+      className={cn("rounded-2xl border border-slate-200 bg-white shadow-panel", className)}
       {...props}
     />
   );
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-4", className)} {...props} />;
+  return <div className={cn("p-6", className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-4 pt-0", className)} {...props} />;
+  return <div className={cn("p-6 pt-0", className)} {...props} />;
 }

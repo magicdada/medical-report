@@ -16,8 +16,8 @@ export function BottomInfoTabs({
   return (
     <Card as="aside" className={className}>
       <CardHeader>
-        <h2 className="text-base font-semibold text-ink">Reference Information</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-xl font-semibold text-ink">Reference Information</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
           Mock medical terminology and similar case data.
         </p>
       </CardHeader>
@@ -28,7 +28,7 @@ export function BottomInfoTabs({
           <div className="mt-3 space-y-3">
             {knowledgeItems.map((item) => (
               <article
-                className="rounded-md border border-border bg-slate-50 p-3"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                 key={item.title}
               >
                 <h4 className="text-sm font-semibold text-ink">{item.title}</h4>
@@ -43,7 +43,7 @@ export function BottomInfoTabs({
           <div className="mt-3 space-y-3">
             {similarCases.map((item) => (
               <article
-                className="rounded-md border border-border bg-slate-50 p-3"
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel"
                 key={item.caseId}
               >
                 <div className="flex items-center justify-between gap-3">

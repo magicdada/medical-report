@@ -37,7 +37,7 @@ export function XrayUploadSlot({
   };
 
   return (
-    <section className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-4">
+    <section className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-5 transition-colors hover:border-blue-300 hover:bg-blue-50">
       <input
         accept={XRAY_FILE_ACCEPT}
         className="hidden"
@@ -47,20 +47,26 @@ export function XrayUploadSlot({
       />
 
       <div className="flex items-start gap-3">
-        <div className="rounded-md bg-white p-2 text-slate-600 shadow-sm">
+        <div className="rounded-xl bg-white p-2.5 text-blue-700 shadow-sm">
           <ImageUp className="h-5 w-5" aria-hidden="true" />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-medium text-ink">{slot.label}</h3>
-            <Badge className="bg-white text-slate-500">
+            <h3 className="text-base font-semibold text-ink">{slot.label}</h3>
+            <Badge
+              className={
+                slot.required
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                  : "border-slate-200 bg-white text-slate-500"
+              }
+            >
               {slot.required ? "Required" : "Optional"}
             </Badge>
           </div>
 
-          <p className="mt-1 text-sm text-slate-500">{slot.helperText}</p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-2 text-sm leading-6 text-slate-600">{slot.helperText}</p>
+          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
             PNG, JPG, or JPEG. Maximum {MAX_XRAY_FILE_SIZE_MB}MB.
           </p>
 
@@ -95,7 +101,7 @@ type UploadedPreviewProps = {
 
 function UploadedPreview({ image, onRemove, onReplace }: UploadedPreviewProps) {
   return (
-    <div className="mt-3 overflow-hidden rounded-md border border-border bg-white">
+    <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="aspect-[4/3] bg-slate-900">
         <img
           alt={`${image.file.name} preview`}

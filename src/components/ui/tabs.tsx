@@ -9,7 +9,7 @@ export function TabsList({
 }: React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      className={cn("flex border-b border-border", className)}
+      className={cn("flex rounded-xl border border-slate-200 bg-slate-50 p-1", className)}
       {...props}
     />
   );
@@ -22,7 +22,7 @@ export function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-500 outline-none transition-colors hover:text-slate-800 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700",
+        "rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 outline-none transition-colors hover:text-slate-800 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm",
         className,
       )}
       {...props}

@@ -23,15 +23,16 @@ export function XrayUploadPanel({
   onRemove,
 }: XrayUploadPanelProps) {
   return (
-    <Card as="aside">
+    <Card as="aside" className="overflow-hidden">
+      <div className="h-1 bg-blue-700" />
       <CardHeader>
-        <h2 className="text-base font-semibold text-ink">Image Upload</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-xl font-semibold text-ink">Image Upload</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
           Upload a frontal chest X-ray and an optional lateral view.
         </p>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         {slots.map((slot) => (
           <XrayUploadSlot
             error={errors[slot.id]}

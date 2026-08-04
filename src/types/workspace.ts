@@ -25,6 +25,16 @@ export type ReportDraft = {
 
 export type ReviewStatus = "unreviewed" | "in_review" | "reviewed";
 
+export type GenerationStatus =
+  | "idle"
+  | "validating"
+  | "uploading"
+  | "generating"
+  | "retrieving_knowledge"
+  | "preparing_workspace"
+  | "success"
+  | "error";
+
 export type KnowledgeItem = {
   title: string;
   summary: string;
