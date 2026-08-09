@@ -1,0 +1,61 @@
+server:
+  port: 8887
+
+spring:
+  application:
+    name: medical-report
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/medical_report?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2B10
+    username: root
+    password: 970917
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  jackson:
+    time-zone: GMT+10
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+# 忽略鉴权url
+ignored:
+  urls:
+    - /api/auth/login
+    - /api/auth/register
+    - /api/auth/refresh/**
+    - /druid/**
+    - /v3/api-docs
+    - /v3/api-docs/**
+    - /swagger-ui/**
+    - /favicon.ico
+    - /static/**
+    - /public/**
+    - /resources/**
+    - /META-INF/resources/**
+
+# 日志
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    com.medical: info
+    org.springframework: warn
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql.BasicBinder: trace
+  file:
+    path: logs
+
+# 调用模型地址
+ai:
+  service:
+    url: http://192.168.x.x:8000
+
+# 文件上传配置
+file:
+  upload-dir: uploads/
