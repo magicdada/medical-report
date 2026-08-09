@@ -11,6 +11,12 @@ type ExportSectionProps = {
   reviewStatus: ReviewStatus;
 };
 
+const reviewStatusLabel: Record<ReviewStatus, string> = {
+  unreviewed: "Clinical review pending",
+  in_review: "Clinical review in progress",
+  reviewed: "Clinician reviewed",
+};
+
 export function ExportSection({
   onExportPdf,
   onExportTxt,
@@ -35,12 +41,12 @@ export function ExportSection({
         <div className="grid gap-4 md:grid-cols-3">
           <SummaryItem label="Case ID" value="CASE-MOCK-001" />
           <SummaryItem label="Generated at" value={generatedAt} />
-          <SummaryItem label="Review status" value={reviewStatus} />
+          <SummaryItem label="Clinical review" value={reviewStatusLabel[reviewStatus]} />
         </div>
 
         {reviewStatus !== "reviewed" ? (
           <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-            This report has not been reviewed by a qualified professional.
+            Clinical review is pending before this report can be finalized.
           </div>
         ) : null}
 

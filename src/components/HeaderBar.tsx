@@ -1,6 +1,7 @@
-import { Activity, FlaskConical, Stethoscope } from "lucide-react";
+import { Activity, FlaskConical, LogOut } from "lucide-react";
 import type { BackendStatus } from "../types/workspace";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 
 type HeaderBarProps = {
   backendStatus: BackendStatus;
@@ -12,57 +13,47 @@ const statusLabel: Record<BackendStatus, string> = {
   offline: "Backend offline",
 };
 
+export const appName = "CXR Assist";
+export const appTagline = "AI-Assisted Radiology Reporting";
+
 export function HeaderBar({ backendStatus }: HeaderBarProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 shadow-panel backdrop-blur lg:px-6">
-      <div className="mx-auto grid min-h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 2xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white shadow-sm">
-            <Stethoscope className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold text-ink md:text-lg">
-              AI Chest X-ray Report Drafting Workspace
-            </h1>
-            <p className="truncate text-sm text-slate-500">
-              AI-generated draft - Human review required
-            </p>
-          </div>
-        </div>
-
-        <nav className="hidden items-center gap-4 justify-self-center text-sm font-medium text-slate-500 2xl:flex">
-          <a className="hover:text-blue-700" href="#upload">
-            Upload
-          </a>
-          <a className="hover:text-blue-700" href="#generation">
-            Generate
-          </a>
-          <a className="hover:text-blue-700" href="#findings">
-            Findings
-          </a>
-          <a className="hover:text-blue-700" href="#impression">
-            Impression
-          </a>
-          <a className="hover:text-blue-700" href="#workspace">
-            Review
-          </a>
-          <a className="hover:text-blue-700" href="#export">
-            Export
-          </a>
-          <a className="hover:text-blue-700" href="#workflow">
-            Workflow
-          </a>
-        </nav>
-
-        <div className="flex shrink-0 items-center justify-end gap-3">
-          <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 sm:flex">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 shadow-panel backdrop-blur lg:px-8">
+      <div className="grid min-h-20 grid-cols-1 items-center gap-3 py-3 md:grid-cols-[1fr_minmax(0,560px)_1fr] md:py-0">
+        <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 lg:flex">
             <Activity className="h-4 w-4" aria-hidden="true" />
             {statusLabel[backendStatus]}
           </div>
-          <Badge className="gap-2 border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <Badge className="hidden gap-2 border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 xl:inline-flex">
             <FlaskConical className="h-4 w-4" aria-hidden="true" />
-            Research use only
+            Research Prototype
           </Badge>
+        </div>
+
+        <div className="min-w-0 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+            New Analysis
+          </p>
+          <h1 className="truncate text-lg font-semibold text-ink md:text-xl">
+            Create and review a chest X-ray report draft
+          </h1>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-center gap-3 md:justify-end">
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-700 text-sm font-semibold text-white">
+              AC
+            </div>
+            <div className="hidden text-sm sm:block">
+              <p className="font-semibold text-ink">Anni Chen</p>
+              <p className="text-xs text-slate-500">Researcher</p>
+            </div>
+          </div>
+          <Button className="hidden gap-2 px-3 md:inline-flex">
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            Logout
+          </Button>
         </div>
       </div>
     </header>

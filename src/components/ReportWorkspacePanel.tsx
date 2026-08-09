@@ -25,7 +25,7 @@ export function ReportWorkspacePanel({
 
         <div className="flex flex-wrap justify-end gap-2">
           <Badge className="bg-blue-50 px-3 py-1 text-sm text-blue-700">
-            AI-generated draft
+            Draft report
           </Badge>
           <Button
             className="bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"

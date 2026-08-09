@@ -19,13 +19,13 @@ export const mockWorkspace: WorkspaceMockData = {
   reportDraft: {
     findings:
       "The lungs are clear. No focal consolidation, pleural effusion, or pneumothorax is seen. The cardiomediastinal silhouette is within normal size limits.",
-    impression: "AI-generated draft: No acute cardiopulmonary abnormality.",
-    reviewNote: "This draft must be reviewed by a human clinician before it can be used as a final report.",
+    impression: "Draft impression: No acute cardiopulmonary abnormality.",
+    reviewNote: "Clinical review is required before this report is finalized.",
   },
   knowledgeItems: [
     {
       title: "Report Draft Notice",
-      summary: "The current content is an AI-generated draft and does not represent an automatic diagnosis.",
+      summary: "The current content is a draft report and does not represent an automatic diagnosis.",
     },
     {
       title: "Review Guidance",

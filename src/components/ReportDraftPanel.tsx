@@ -18,7 +18,7 @@ export function ReportDraftPanel({ draft }: ReportDraftPanelProps) {
           </p>
         </div>
         <Badge className="bg-blue-50 px-3 py-1 text-sm text-blue-700">
-          AI-generated draft
+          Draft report
         </Badge>
       </CardHeader>
 

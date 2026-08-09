@@ -15,9 +15,9 @@ type ReportReviewWorkspacePanelProps = {
 };
 
 const reviewStatusLabel: Record<ReviewStatus, string> = {
-  unreviewed: "Unreviewed",
-  in_review: "In Review",
-  reviewed: "Reviewed",
+  unreviewed: "Clinical review pending",
+  in_review: "Clinical review in progress",
+  reviewed: "Clinician reviewed",
 };
 
 const reviewStatusOptions: ReviewStatus[] = ["unreviewed", "in_review", "reviewed"];
@@ -31,7 +31,7 @@ function buildReportText(
   return [
     "AI Chest X-ray Report Draft",
     "",
-    `Human Review Status: ${reviewStatusLabel[reviewStatus]}`,
+    `Clinical Review Status: ${reviewStatusLabel[reviewStatus]}`,
     `Exported At: ${exportedAt}`,
     "",
     "Findings",
@@ -40,8 +40,8 @@ function buildReportText(
     "Impression",
     report.impression,
     "",
-    "Research Use Notice",
-    "This report is an editable AI-generated draft and must be reviewed by a human clinician.",
+    "Disclaimer",
+    "For research and educational use only. Not intended for clinical diagnosis.",
   ].join("\n");
 }
 
@@ -119,7 +119,7 @@ function openPrintableReport(
   </head>
   <body>
     <h1>AI Chest X-ray Report Draft</h1>
-    <div class="meta">Human Review Status: ${escapeHtml(reviewStatusLabel[reviewStatus])}</div>
+    <div class="meta">Clinical Review Status: ${escapeHtml(reviewStatusLabel[reviewStatus])}</div>
     <div class="meta">Exported At: ${escapeHtml(exportedAt)}</div>
 
     <h2>Findings</h2>
@@ -129,7 +129,8 @@ function openPrintableReport(
     <div class="section">${escapeHtml(report.impression)}</div>
 
     <div class="notice">
-      This report is an editable AI-generated draft and must be reviewed by a human clinician.
+      <strong>Disclaimer</strong><br />
+      For research and educational use only. Not intended for clinical diagnosis.
     </div>
   </body>
 </html>`;
@@ -180,13 +181,13 @@ export function ReportReviewWorkspacePanel({
         <div>
           <h2 className="text-xl font-semibold text-ink">Report Workspace</h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Separate the AI-generated draft from the human-reviewed report.
+            Separate the draft report from the clinically reviewed report.
           </p>
         </div>
 
         <div className="flex flex-wrap justify-end gap-2">
           <Badge className="bg-blue-50 px-3 py-1 text-sm text-blue-700">
-            AI-generated draft
+            Draft report
           </Badge>
           <Badge className="bg-amber-50 px-3 py-1 text-sm text-amber-800">
             {reviewStatusLabel[reviewStatus]}
@@ -211,7 +212,7 @@ export function ReportReviewWorkspacePanel({
 
           <TabsContent className="px-0 pb-0" value="ai-draft">
             <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm text-slate-500">Read-only draft. Human review is required.</p>
+              <p className="text-sm text-slate-500">Read-only draft. Clinical review is pending.</p>
               <Button className="gap-2" onClick={resetAiDraft}>
                 <RotateCcw className="h-4 w-4" aria-hidden="true" />
                 Reset

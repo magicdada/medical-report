@@ -17,8 +17,8 @@ type ReportEditorSectionProps = {
 const reviewStatusOptions: ReviewStatus[] = ["unreviewed", "in_review", "reviewed"];
 
 const reviewStatusLabel: Record<ReviewStatus, string> = {
-  unreviewed: "Unreviewed",
-  in_review: "In Review",
+  unreviewed: "Pending",
+  in_review: "In Progress",
   reviewed: "Reviewed",
 };
 
@@ -34,9 +34,9 @@ export function ReportEditorSection({
       <div className="h-1 bg-blue-700" />
       <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h3 className="text-2xl font-semibold text-ink">Human Review Workspace</h3>
+          <h3 className="text-2xl font-semibold text-ink">Clinical Review Workspace</h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Compare the read-only AI draft with the editable reviewed report.
+            Compare the read-only draft with the editable clinical report.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -50,7 +50,7 @@ export function ReportEditorSection({
       <CardContent>
         <div className="grid gap-5 xl:grid-cols-2">
           <section>
-            <h4 className="text-sm font-semibold text-slate-700">AI Draft</h4>
+            <h4 className="text-sm font-semibold text-slate-700">Draft Report</h4>
             <Textarea
               className="mt-2 min-h-80 resize-none"
               readOnly

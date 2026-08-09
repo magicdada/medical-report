@@ -12,9 +12,9 @@ const statusClassName: Record<ReviewStatus, string> = {
 };
 
 const statusLabel: Record<ReviewStatus, string> = {
-  unreviewed: "Unreviewed",
-  in_review: "In Review",
-  reviewed: "Reviewed",
+  unreviewed: "Clinical review pending",
+  in_review: "Clinical review in progress",
+  reviewed: "Clinician reviewed",
 };
 
 export function ReportStatusBadge({ status }: ReportStatusBadgeProps) {

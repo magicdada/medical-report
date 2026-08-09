@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import type { ReportDraft, ReviewStatus } from "../types/workspace";
 
 const reviewStatusLabel: Record<ReviewStatus, string> = {
-  unreviewed: "Unreviewed",
-  in_review: "In Review",
-  reviewed: "Reviewed",
+  unreviewed: "Clinical review pending",
+  in_review: "Clinical review in progress",
+  reviewed: "Clinician reviewed",
 };
 
 function buildReportText(
@@ -14,9 +14,9 @@ function buildReportText(
   const exportedAt = new Date().toLocaleString();
 
   return [
-    "AI Chest X-ray Report Draft",
+    "CXR Assist Report Draft",
     "",
-    `Human Review Status: ${reviewStatusLabel[reviewStatus]}`,
+    `Clinical Review Status: ${reviewStatusLabel[reviewStatus]}`,
     `Exported At: ${exportedAt}`,
     "",
     "Findings",
@@ -25,8 +25,8 @@ function buildReportText(
     "Impression",
     report.impression,
     "",
-    "Research Use Notice",
-    "This report is an editable AI-generated draft and must be reviewed by a human clinician.",
+    "Disclaimer",
+    "For research and educational use only. Not intended for clinical diagnosis.",
   ].join("\n");
 }
 
@@ -64,7 +64,7 @@ function openPrintableReport(
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <title>AI Chest X-ray Report Draft</title>
+    <title>CXR Assist Report Draft</title>
     <style>
       body {
         color: #111827;
@@ -103,8 +103,8 @@ function openPrintableReport(
     </style>
   </head>
   <body>
-    <h1>AI Chest X-ray Report Draft</h1>
-    <div class="meta">Human Review Status: ${escapeHtml(reviewStatusLabel[reviewStatus])}</div>
+    <h1>CXR Assist Report Draft</h1>
+    <div class="meta">Clinical Review Status: ${escapeHtml(reviewStatusLabel[reviewStatus])}</div>
     <div class="meta">Exported At: ${escapeHtml(exportedAt)}</div>
 
     <h2>Findings</h2>
@@ -114,7 +114,8 @@ function openPrintableReport(
     <div class="section">${escapeHtml(report.impression)}</div>
 
     <div class="notice">
-      This report is an editable AI-generated draft and must be reviewed by a human clinician.
+      <strong>Disclaimer</strong><br />
+      For research and educational use only. Not intended for clinical diagnosis.
     </div>
   </body>
 </html>`;
