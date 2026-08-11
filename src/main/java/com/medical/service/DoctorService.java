@@ -45,4 +45,11 @@ public interface DoctorService {
      * @return 医生信息
      */
     Doctor getByUsername(String username);
+
+    /**
+     * 退出登录
+     *
+     * @param doctorId 医生ID
+     */
+    void logout(String doctorId);
 }

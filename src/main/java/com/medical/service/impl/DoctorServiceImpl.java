@@ -6,7 +6,9 @@ import com.medical.common.security.AuthUser;
 import com.medical.common.security.Token;
 import com.medical.common.security.TokenUtil;
 import com.medical.entity.dos.Doctor;
+import com.medical.entity.dos.DoctorToken;
 import com.medical.mapper.DoctorMapper;
+import com.medical.mapper.DoctorTokenMapper;
 import com.medical.service.DoctorService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,9 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Autowired
     private DoctorMapper doctorMapper;
+
+    @Autowired
+    private DoctorTokenMapper doctorTokenMapper;
 
     @Autowired
     private TokenUtil tokenUtil;
@@ -82,5 +87,14 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public Doctor getByUsername(String username) {
         return doctorMapper.findByUsername(username);
+    }
+
+    @Override
+    public void logout(String doctorId) {
+        DoctorToken oldToken = doctorTokenMapper.findByDoctorId(doctorId);
+        if (oldToken != null) {
+            doctorTokenMapper.delete(oldToken);
+        }
+        log.info("医生退出登录，ID：{}", doctorId);
     }
 }

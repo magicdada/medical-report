@@ -1,6 +1,8 @@
 package com.medical.controller;
 
 import com.medical.common.ResultMessage;
+import com.medical.common.security.AuthUser;
+import com.medical.common.security.UserContext;
 import com.medical.common.util.ResultUtil;
 import com.medical.common.security.Token;
 import com.medical.common.security.TokenUtil;
@@ -66,5 +68,19 @@ public class AuthController {
     @GetMapping("/refresh/{refreshToken}")
     public ResultMessage<Object> refreshToken(@NotNull(message = "刷新token不能为空") @PathVariable String refreshToken) {
         return ResultUtil.data(tokenUtil.refreshToken(refreshToken));
+    }
+
+    /**
+     * 退出登录
+     *
+     * @return 结果
+     */
+    @PostMapping("/logout")
+    public ResultMessage<Object> logout() {
+        AuthUser authUser = UserContext.getCurrentUser();
+        if (authUser != null) {
+            doctorService.logout(authUser.getId());
+        }
+        return ResultUtil.success();
     }
 }
