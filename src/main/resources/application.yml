@@ -55,6 +55,8 @@ logging:
 ai:
   service:
     url: http://192.168.x.x:8000
+  baseline:
+    avg-report-time: 10
 
 # 文件上传配置
 file:

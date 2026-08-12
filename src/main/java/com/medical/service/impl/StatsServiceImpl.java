@@ -11,6 +11,7 @@ import com.medical.service.StatsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,9 @@ public class StatsServiceImpl implements StatsService {
 
     @Autowired
     private PatientMapper patientMapper;
+
+    @Value("${ai.baseline.avg-report-time}")
+    private Integer avgReportTimeBaseline;
 
     @Override
     public OverviewVO getOverview(String doctorId) {
@@ -179,6 +183,38 @@ public class StatsServiceImpl implements StatsService {
         vo.setAiDraft(report.getAiDraft());
         vo.setDoctorFinal(report.getReportContent());
         vo.setCreateTime(report.getCreateTime());
+        return vo;
+    }
+
+    @Override
+    public EfficiencyVO getEfficiency(String doctorId) {
+        List<Report> reports = reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId);
+
+        // 统计有AI辅助的报告：从创建到签发的平均时间
+        List<Report> signedReports = reports.stream()
+                .filter(r -> ReportStatusEnum.SIGNED.name().equals(r.getStatus()))
+                .filter(r -> r.getCreateTime() != null && r.getUpdateTime() != null)
+                .collect(Collectors.toList());
+
+        int avgTimeWithAi = 0;
+        if (!signedReports.isEmpty()) {
+            long totalMinutes = signedReports.stream()
+                    .mapToLong(r -> (r.getUpdateTime().getTime() - r.getCreateTime().getTime()) / (1000 * 60))
+                    .sum();
+            avgTimeWithAi = (int) (totalMinutes / signedReports.size());
+        }
+
+        // 行业平均出报告时间（无AI辅助）
+        int avgTimeBefore = avgReportTimeBaseline;
+
+        int improvement = avgTimeBefore > 0 && avgTimeWithAi > 0
+                ? (avgTimeBefore - avgTimeWithAi) * 100 / avgTimeBefore
+                : 0;
+
+        EfficiencyVO vo = new EfficiencyVO();
+        vo.setAvgTimeBefore(avgTimeBefore);
+        vo.setAvgTimeWithAi(avgTimeWithAi > 0 ? avgTimeWithAi : 0);
+        vo.setImprovementPercent(Math.max(improvement, 0));
         return vo;
     }
 }

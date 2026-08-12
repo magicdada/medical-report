@@ -2,6 +2,7 @@ package com.medical.service;
 
 import com.medical.common.security.Token;
 import com.medical.entity.dos.Doctor;
+import com.medical.entity.dto.DoctorUpdateDTO;
 
 /**
  * 医生业务层
@@ -45,6 +46,24 @@ public interface DoctorService {
      * @return 医生信息
      */
     Doctor getByUsername(String username);
+
+    /**
+     * 更新医生信息
+     *
+     * @param id  医生ID
+     * @param dto 更新信息
+     * @return 医生信息
+     */
+    Doctor updateInfo(String id, DoctorUpdateDTO dto);
+
+    /**
+     * 修改密码
+     *
+     * @param id          医生ID
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     */
+    void updatePassword(String id, String oldPassword, String newPassword);
 
     /**
      * 退出登录

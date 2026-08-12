@@ -7,6 +7,7 @@ import com.medical.common.security.Token;
 import com.medical.common.security.TokenUtil;
 import com.medical.entity.dos.Doctor;
 import com.medical.entity.dos.DoctorToken;
+import com.medical.entity.dto.DoctorUpdateDTO;
 import com.medical.mapper.DoctorMapper;
 import com.medical.mapper.DoctorTokenMapper;
 import com.medical.service.DoctorService;
@@ -87,6 +88,35 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public Doctor getByUsername(String username) {
         return doctorMapper.findByUsername(username);
+    }
+
+    @Override
+    public Doctor updateInfo(String id, DoctorUpdateDTO dto) {
+        Doctor doctor = doctorMapper.findById(id).orElse(null);
+        if (doctor == null) {
+            throw new ServiceException(ResultCode.USER_NOT_EXIST);
+        }
+        doctor.setRealName(dto.getRealName());
+        doctor.setDepartment(dto.getDepartment());
+        doctor.setPhone(dto.getPhone());
+        doctor.setEmail(dto.getEmail());
+        doctorMapper.save(doctor);
+        log.info("医生信息更新成功：{}", id);
+        return doctor;
+    }
+
+    @Override
+    public void updatePassword(String id, String oldPassword, String newPassword) {
+        Doctor doctor = doctorMapper.findById(id).orElse(null);
+        if (doctor == null) {
+            throw new ServiceException(ResultCode.USER_NOT_EXIST);
+        }
+        if (!passwordEncoder.matches(oldPassword, doctor.getPassword())) {
+            throw new ServiceException(ResultCode.USER_PASSWORD_ERROR);
+        }
+        doctor.setPassword(passwordEncoder.encode(newPassword));
+        doctorMapper.save(doctor);
+        log.info("医生密码修改成功：{}", id);
     }
 
     @Override

@@ -49,4 +49,12 @@ public interface StatsService {
      * @return 对比记录
      */
     List<ComparisonRecordVO> getComparisonRecords(String doctorId);
+
+    /**
+     * 获取AI效率统计
+     *
+     * @param doctorId 医生ID
+     * @return 效率统计
+     */
+    EfficiencyVO getEfficiency(String doctorId);
 }

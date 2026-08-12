@@ -97,4 +97,18 @@ public class StatsController {
         }
         return ResultUtil.data(statsService.getComparisonRecords(authUser.getId()));
     }
+
+    /**
+     * 获取AI效率统计
+     *
+     * @return 效率统计
+     */
+    @GetMapping("/efficiency")
+    public ResultMessage<EfficiencyVO> efficiency() {
+        AuthUser authUser = UserContext.getCurrentUser();
+        if (authUser == null) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        return ResultUtil.data(statsService.getEfficiency(authUser.getId()));
+    }
 }

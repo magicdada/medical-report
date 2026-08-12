@@ -1,16 +1,21 @@
 package com.medical.controller;
 
+import com.medical.common.ResultCode;
 import com.medical.common.ResultMessage;
+import com.medical.common.ServiceException;
 import com.medical.common.security.AuthUser;
 import com.medical.common.security.UserContext;
 import com.medical.common.util.ResultUtil;
 import com.medical.common.security.Token;
 import com.medical.common.security.TokenUtil;
 import com.medical.entity.dos.Doctor;
+import com.medical.entity.dto.DoctorUpdateDTO;
 import com.medical.service.DoctorService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 /**
@@ -68,6 +73,54 @@ public class AuthController {
     @GetMapping("/refresh/{refreshToken}")
     public ResultMessage<Object> refreshToken(@NotNull(message = "刷新token不能为空") @PathVariable String refreshToken) {
         return ResultUtil.data(tokenUtil.refreshToken(refreshToken));
+    }
+
+    /**
+     * 获取当前登录医生信息
+     *
+     * @return 医生信息
+     */
+    @GetMapping("/info")
+    public ResultMessage<Doctor> info() {
+        AuthUser authUser = UserContext.getCurrentUser();
+        if (authUser == null) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        Doctor doctor = doctorService.getById(authUser.getId());
+        return ResultUtil.data(doctor);
+    }
+
+    /**
+     * 更新个人信息
+     *
+     * @param dto 更新信息
+     * @return 医生信息
+     */
+    @PutMapping("/update")
+    public ResultMessage<Doctor> updateInfo(@RequestBody @Valid DoctorUpdateDTO dto) {
+        AuthUser authUser = UserContext.getCurrentUser();
+        if (authUser == null) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        return ResultUtil.data(doctorService.updateInfo(authUser.getId(), dto));
+    }
+
+    /**
+     * 修改密码
+     *
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     * @return 结果
+     */
+    @PutMapping("/password")
+    public ResultMessage<Object> updatePassword(@NotNull(message = "旧密码不能为空") @RequestParam String oldPassword,
+                                                @NotNull(message = "新密码不能为空") @RequestParam String newPassword) {
+        AuthUser authUser = UserContext.getCurrentUser();
+        if (authUser == null) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        doctorService.updatePassword(authUser.getId(), oldPassword, newPassword);
+        return ResultUtil.success();
     }
 
     /**
