@@ -1,8 +1,6 @@
 package com.medical.controller;
 
-import com.medical.common.ResultCode;
 import com.medical.common.ResultMessage;
-import com.medical.common.ServiceException;
 import com.medical.common.security.AuthUser;
 import com.medical.common.security.UserContext;
 import com.medical.common.util.ResultUtil;
@@ -13,10 +11,10 @@ import com.medical.entity.dto.DoctorUpdateDTO;
 import com.medical.service.DoctorService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
 import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
 
 /**
  * 认证接口
@@ -24,6 +22,7 @@ import javax.validation.constraints.NotNull;
  * @since 2026/08/08
  */
 @Slf4j
+@Validated
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -42,8 +41,8 @@ public class AuthController {
      * @return token
      */
     @PostMapping("/login")
-    public ResultMessage<Token> login(@NotNull(message = "用户名不能为空") @RequestParam String username,
-                                      @NotNull(message = "密码不能为空") @RequestParam String password) {
+    public ResultMessage<Token> login(@NotBlank(message = "用户名不能为空") @RequestParam String username,
+                                      @NotBlank(message = "密码不能为空") @RequestParam String password) {
         return ResultUtil.data(doctorService.login(username, password));
     }
 
@@ -57,8 +56,8 @@ public class AuthController {
      * @return 医生信息
      */
     @PostMapping("/register")
-    public ResultMessage<Doctor> register(@NotNull(message = "用户名不能为空") @RequestParam String username,
-                                          @NotNull(message = "密码不能为空") @RequestParam String password,
+    public ResultMessage<Doctor> register(@NotBlank(message = "用户名不能为空") @RequestParam String username,
+                                          @NotBlank(message = "密码不能为空") @RequestParam String password,
                                           @RequestParam(required = false) String realName,
                                           @RequestParam(required = false) String department) {
         return ResultUtil.data(doctorService.register(username, password, realName, department));
@@ -71,7 +70,7 @@ public class AuthController {
      * @return 新的token
      */
     @GetMapping("/refresh/{refreshToken}")
-    public ResultMessage<Object> refreshToken(@NotNull(message = "刷新token不能为空") @PathVariable String refreshToken) {
+    public ResultMessage<Object> refreshToken(@NotBlank(message = "刷新token不能为空") @PathVariable String refreshToken) {
         return ResultUtil.data(tokenUtil.refreshToken(refreshToken));
     }
 
@@ -83,9 +82,6 @@ public class AuthController {
     @GetMapping("/info")
     public ResultMessage<Doctor> info() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         Doctor doctor = doctorService.getById(authUser.getId());
         return ResultUtil.data(doctor);
     }
@@ -99,9 +95,6 @@ public class AuthController {
     @PutMapping("/update")
     public ResultMessage<Doctor> updateInfo(@RequestBody @Valid DoctorUpdateDTO dto) {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         return ResultUtil.data(doctorService.updateInfo(authUser.getId(), dto));
     }
 
@@ -113,12 +106,9 @@ public class AuthController {
      * @return 结果
      */
     @PutMapping("/password")
-    public ResultMessage<Object> updatePassword(@NotNull(message = "旧密码不能为空") @RequestParam String oldPassword,
-                                                @NotNull(message = "新密码不能为空") @RequestParam String newPassword) {
+    public ResultMessage<Object> updatePassword(@NotBlank(message = "旧密码不能为空") @RequestParam String oldPassword,
+                                                @NotBlank(message = "新密码不能为空") @RequestParam String newPassword) {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         doctorService.updatePassword(authUser.getId(), oldPassword, newPassword);
         return ResultUtil.success();
     }

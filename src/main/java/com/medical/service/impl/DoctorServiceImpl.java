@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 医生业务层实现
@@ -39,6 +40,7 @@ public class DoctorServiceImpl implements DoctorService {
     private BCryptPasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Doctor register(String username, String password, String realName, String department) {
         if (doctorMapper.existsByUsername(username)) {
             throw new ServiceException(ResultCode.USER_EXIST);
@@ -106,6 +108,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updatePassword(String id, String oldPassword, String newPassword) {
         Doctor doctor = doctorMapper.findById(id).orElse(null);
         if (doctor == null) {

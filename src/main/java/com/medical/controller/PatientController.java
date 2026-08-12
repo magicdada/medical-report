@@ -7,7 +7,7 @@ import com.medical.service.PatientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
 import java.util.List;
 
 /**
@@ -52,7 +52,7 @@ public class PatientController {
      * @return 患者列表
      */
     @GetMapping("/search")
-    public ResultMessage<List<Patient>> search(@NotNull(message = "姓名不能为空") @RequestParam String name) {
+    public ResultMessage<List<Patient>> search(@NotBlank(message = "姓名不能为空") @RequestParam String name) {
         return ResultUtil.data(patientService.search(name));
     }
 

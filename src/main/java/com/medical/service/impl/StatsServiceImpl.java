@@ -78,7 +78,7 @@ public class StatsServiceImpl implements StatsService {
         int[] counts = new int[DiseaseEnum.values().length];
 
         for (Report report : reports) {
-            if (StringUtils.isNotBlank(report.getReportContent())) {
+            if (StringUtils.isBlank(report.getReportContent())) {
                 continue;
             }
             String content = report.getReportContent().toLowerCase();

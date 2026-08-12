@@ -1,8 +1,6 @@
 package com.medical.controller;
 
-import com.medical.common.ResultCode;
 import com.medical.common.ResultMessage;
-import com.medical.common.ServiceException;
 import com.medical.common.util.ResultUtil;
 import com.medical.common.security.AuthUser;
 import com.medical.common.security.UserContext;
@@ -12,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
 import java.util.List;
 
 /**
@@ -36,12 +34,9 @@ public class ReportController {
      * @return 报告信息
      */
     @PostMapping("/generate")
-    public ResultMessage<Report> generate(@NotNull(message = "患者ID不能为空") @RequestParam String patientId,
+    public ResultMessage<Report> generate(@NotBlank(message = "患者ID不能为空") @RequestParam String patientId,
                                           @RequestParam("file") MultipartFile file) {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         String doctorId = authUser.getId();
         return ResultUtil.data(reportService.generateReport(doctorId, patientId, file));
     }
@@ -76,9 +71,6 @@ public class ReportController {
     @GetMapping("/list/mine")
     public ResultMessage<List<Report>> getMyReports() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         String doctorId = authUser.getId();
         return ResultUtil.data(reportService.getByDoctorId(doctorId));
     }
@@ -92,7 +84,7 @@ public class ReportController {
      */
     @PutMapping("/status/{id}")
     public ResultMessage<Report> updateStatus(@PathVariable String id,
-                                              @NotNull(message = "状态不能为空") @RequestParam String status) {
+                                              @NotBlank(message = "状态不能为空") @RequestParam String status) {
         return ResultUtil.data(reportService.updateStatus(id, status));
     }
 }

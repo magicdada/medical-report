@@ -1,9 +1,7 @@
 package com.medical.controller;
 
-import com.medical.common.ResultCode;
 import com.medical.common.ResultMessage;
 import com.medical.common.util.ResultUtil;
-import com.medical.common.ServiceException;
 import com.medical.common.security.AuthUser;
 import com.medical.common.security.UserContext;
 import com.medical.entity.vos.*;
@@ -36,9 +34,6 @@ public class StatsController {
     @GetMapping("/overview")
     public ResultMessage<OverviewVO> overview() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         return ResultUtil.data(statsService.getOverview(authUser.getId()));
     }
 
@@ -50,9 +45,6 @@ public class StatsController {
     @GetMapping("/monthly")
     public ResultMessage<List<MonthlyVolumeVO>> monthly() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         return ResultUtil.data(statsService.getMonthlyVolume(authUser.getId()));
     }
 
@@ -64,9 +56,6 @@ public class StatsController {
     @GetMapping("/disease")
     public ResultMessage<List<DiseaseDistributionVO>> disease() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         return ResultUtil.data(statsService.getDiseaseDistribution(authUser.getId()));
     }
 
@@ -78,9 +67,6 @@ public class StatsController {
     @GetMapping("/comparison")
     public ResultMessage<ComparisonStatsVO> comparison() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         return ResultUtil.data(statsService.getComparisonStats(authUser.getId()));
     }
 
@@ -92,9 +78,6 @@ public class StatsController {
     @GetMapping("/comparison/records")
     public ResultMessage<List<ComparisonRecordVO>> comparisonRecords() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         return ResultUtil.data(statsService.getComparisonRecords(authUser.getId()));
     }
 
@@ -106,9 +89,6 @@ public class StatsController {
     @GetMapping("/efficiency")
     public ResultMessage<EfficiencyVO> efficiency() {
         AuthUser authUser = UserContext.getCurrentUser();
-        if (authUser == null) {
-            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
-        }
         return ResultUtil.data(statsService.getEfficiency(authUser.getId()));
     }
 }

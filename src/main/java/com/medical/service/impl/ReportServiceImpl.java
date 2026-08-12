@@ -12,6 +12,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -45,6 +46,7 @@ public class ReportServiceImpl implements ReportService {
     private final WebClient webClient = WebClient.create();
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Report generateReport(String doctorId, String patientId, MultipartFile imageFile) {
         try {
             // 1. 保存上传的影像文件
