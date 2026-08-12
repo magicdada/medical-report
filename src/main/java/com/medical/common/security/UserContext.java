@@ -4,9 +4,10 @@ import com.medical.common.enums.SecurityEnum;
 import com.google.gson.Gson;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -22,12 +23,19 @@ public class UserContext {
      * @return 授权用户
      */
     public static AuthUser getCurrentUser() {
-        if (RequestContextHolder.getRequestAttributes() != null) {
-            HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-            String accessToken = request.getHeader(SecurityEnum.HEADER_TOKEN.getValue());
-            return getAuthUser(accessToken);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getDetails() instanceof AuthUser) {
+            return (AuthUser) authentication.getDetails();
         }
         return null;
+    }
+
+    /**
+     * 获取当前用户ID
+     */
+    public static String getCurrentUserId() {
+        AuthUser user = getCurrentUser();
+        return user != null ? user.getId() : null;
     }
 
     /**

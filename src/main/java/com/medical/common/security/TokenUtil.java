@@ -116,8 +116,8 @@ public class TokenUtil {
     private String createToken(AuthUser authUser, Long expirationTime) {
         return Jwts.builder()
                 .claim(SecurityEnum.USER_CONTEXT.getValue(), new Gson().toJson(authUser))
-                .setSubject(authUser.getUsername())
-                .setExpiration(new Date(System.currentTimeMillis() + expirationTime * 60 * 1000))
+                .subject(authUser.getUsername())
+                .expiration(new Date(System.currentTimeMillis() + expirationTime * 60 * 1000))
                 .signWith(SecretKeyUtil.generalKey())
                 .compact();
     }
