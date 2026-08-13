@@ -31,6 +31,9 @@ public enum ResultCode {
 
     FILE_NOT_EXIST_ERROR(50001, "上传文件不能为空"),
     FILE_TYPE_NOT_SUPPORT(50002, "不支持的文件类型"),
+    FILE_SIZE_EXCEED(50003, "文件大小超出限制"),
+    FILE_EXTENSION_NOT_ALLOWED(50004, "不允许的文件扩展名"),
+    FILE_UPLOAD_ERROR(50005, "文件上传失败"),
 
     AI_SERVICE_ERROR(60001, "AI推理服务异常，请稍后重试"),
     AI_SERVICE_TIMEOUT(60002, "AI推理服务超时");

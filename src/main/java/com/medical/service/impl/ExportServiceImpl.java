@@ -44,8 +44,9 @@ public class ExportServiceImpl implements ExportService {
     private PatientMapper patientMapper;
 
     @Override
-    public void exportPdf(String reportId, HttpServletResponse response) {
+    public void exportPdf(String reportId, String doctorId,HttpServletResponse response) {
         Report report = getReportOrThrow(reportId);
+        checkOwnership(report, doctorId);
         Patient patient = getPatientOrThrow(report.getPatientId());
 
         ServletOutputStream out = null;
@@ -114,8 +115,9 @@ public class ExportServiceImpl implements ExportService {
     }
 
     @Override
-    public void exportWord(String reportId, HttpServletResponse response) {
+    public void exportWord(String reportId,String doctorId, HttpServletResponse response) {
         Report report = getReportOrThrow(reportId);
+        checkOwnership(report, doctorId);
         Patient patient = getPatientOrThrow(report.getPatientId());
 
         ServletOutputStream out = null;
@@ -232,6 +234,15 @@ public class ExportServiceImpl implements ExportService {
         XWPFRun contentRun = contentParagraph.createRun();
         contentRun.setText(content);
         contentRun.setFontSize(10);
+    }
+
+    /**
+     * 校验报告归属权
+     */
+    private void checkOwnership(Report report, String doctorId) {
+        if (!report.getDoctorId().equals(doctorId)) {
+            throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR);
+        }
     }
 
     private void closeStream(ServletOutputStream out) {

@@ -49,9 +49,10 @@ public interface ReportService {
     /**
      * 更新报告状态
      *
-     * @param id     报告ID
-     * @param status 状态
+     * @param id       报告ID
+     * @param status   状态
+     * @param doctorId 当前医生ID
      * @return 报告信息
      */
-    Report updateStatus(String id, String status);
+    Report updateStatus(String id, String status, String doctorId);
 }

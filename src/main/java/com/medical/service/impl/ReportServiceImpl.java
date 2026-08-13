@@ -2,13 +2,14 @@ package com.medical.service.impl;
 
 import com.medical.common.ResultCode;
 import com.medical.common.ServiceException;
+import com.medical.common.enums.ReportStatusEnum;
 import com.medical.entity.dos.Report;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.ReportService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,11 +45,22 @@ public class ReportServiceImpl implements ReportService {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    private final WebClient webClient = WebClient.create();
+    /**
+     * 允许上传的图片类型
+     */
+    private static final String[] ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".dcm"};
+    private static final String[] ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "application/dicom"};
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+    private final WebClient webClient = WebClient.builder()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
+            .build();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Report generateReport(String doctorId, String patientId, MultipartFile imageFile) {
+        // 文件校验
+        validateImageFile(imageFile);
         try {
             // 1. 保存上传的影像文件
             String fileName = UUID.randomUUID().toString().replace("-", "") + "_" + imageFile.getOriginalFilename();
@@ -59,32 +72,32 @@ public class ReportServiceImpl implements ReportService {
             imageFile.transferTo(filePath.toFile());
             log.info("影像文件保存成功：{}", filePath);
 
-            // 2. 调用Python AI推理服务
+            // 2. 调用Python AI推理服务（使用FileSystemResource避免大文件进内存）
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
-            builder.part("file", new ByteArrayResource(imageFile.getBytes()) {
-                @Override
-                public String getFilename() {
-                    return imageFile.getOriginalFilename();
-                }
-            }).contentType(MediaType.IMAGE_JPEG);
+            builder.part("file", new FileSystemResource(filePath.toFile()))
+                    .contentType(MediaType.IMAGE_JPEG);
 
             Map result = webClient.post()
                     .uri(aiServiceUrl + "/predict")
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
                     .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(60))
                     .block();
 
             log.info("AI推理完成，结果：{}", result);
 
             // 3. 组装报告
+            String reportContent = result != null ? (String) result.get("report") : "";
+            String heatmapPath = result != null ? (String) result.get("heatmap_path") : "";
             Report report = new Report();
             report.setDoctorId(doctorId);
             report.setPatientId(patientId);
             report.setImagePath(filePath.toString());
-            report.setReportContent(result != null ? (String) result.get("report") : "");
-            report.setHeatmapPath(result != null ? (String) result.get("heatmap_path") : "");
-            report.setStatus("DRAFT");
+            report.setReportContent(reportContent);
+            report.setAiDraft(reportContent);
+            report.setHeatmapPath(heatmapPath);
+            report.setStatus(ReportStatusEnum.DRAFT.name());
             report.setCreateBy(doctorId);
             reportMapper.save(report);
             log.info("诊断报告生成成功，ID：{}", report.getId());
@@ -93,7 +106,55 @@ public class ReportServiceImpl implements ReportService {
         } catch (IOException e) {
             log.error("文件处理失败", e);
             throw new ServiceException(ResultCode.REPORT_GENERATE_ERROR);
+        } catch (Exception e) {
+            log.error("AI推理服务异常", e);
+            throw new ServiceException(ResultCode.AI_SERVICE_ERROR);
         }
+    }
+
+    /**
+     * 校验上传的影像文件
+     */
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ServiceException(ResultCode.FILE_NOT_EXIST_ERROR);
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new ServiceException(ResultCode.FILE_SIZE_EXCEED);
+        }
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !isAllowedExtension(originalFilename)) {
+            throw new ServiceException(ResultCode.FILE_EXTENSION_NOT_ALLOWED);
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !isAllowedContentType(contentType)) {
+            throw new ServiceException(ResultCode.FILE_TYPE_NOT_SUPPORT);
+        }
+    }
+
+    /**
+     * 判断文件扩展名是否允许
+     */
+    private boolean isAllowedExtension(String filename) {
+        String lowerName = filename.toLowerCase();
+        for (String ext : ALLOWED_EXTENSIONS) {
+            if (lowerName.endsWith(ext)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断MIME类型是否允许
+     */
+    private boolean isAllowedContentType(String contentType) {
+        for (String type : ALLOWED_CONTENT_TYPES) {
+            if (type.equals(contentType)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -112,10 +173,13 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public Report updateStatus(String id, String status) {
+    public Report updateStatus(String id, String status, String doctorId) {
         Report report = reportMapper.findById(id).orElse(null);
         if (report == null) {
             throw new ServiceException(ResultCode.REPORT_NOT_EXIST);
+        }
+        if (!report.getDoctorId().equals(doctorId)) {
+            throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR);
         }
         report.setStatus(status);
         reportMapper.save(report);

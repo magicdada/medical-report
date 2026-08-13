@@ -9,16 +9,18 @@ import com.medical.mapper.PatientMapper;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.StatsService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * 统计业务层实现
+ *
  * @author wangda
  * @since 2026/08/11
  */
@@ -37,63 +39,59 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public OverviewVO getOverview(String doctorId) {
-        List<Report> reports = reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId);
-
-        long draftCount = reports.stream()
-                .filter(r -> ReportStatusEnum.DRAFT.name().equals(r.getStatus()))
-                .count();
-        long signedCount = reports.stream()
-                .filter(r -> ReportStatusEnum.SIGNED.name().equals(r.getStatus())
-                        || ReportStatusEnum.CONFIRMED.name().equals(r.getStatus()))
-                .count();
-        long comparedCount = reports.stream().filter(this::hasAiDraft).count();
-        long unmodifiedCount = reports.stream().filter(this::hasAiDraft).filter(this::isUnmodified).count();
+        long comparedCount = reportMapper.countCompared(doctorId);
+        long unmodifiedCount = reportMapper.countUnmodified(doctorId);
 
         OverviewVO vo = new OverviewVO();
         vo.setTotalPatients(patientMapper.count());
-        vo.setTotalReports((long) reports.size());
-        vo.setDraftCount(draftCount);
-        vo.setSignedCount(signedCount);
+        vo.setTotalReports(reportMapper.countByDoctorId(doctorId));
+        vo.setDraftCount(reportMapper.countByDoctorIdAndStatus(doctorId, ReportStatusEnum.DRAFT.name()));
+        vo.setSignedCount(
+                reportMapper.countByDoctorIdAndStatus(doctorId, ReportStatusEnum.SIGNED.name())
+                        + reportMapper.countByDoctorIdAndStatus(doctorId, ReportStatusEnum.CONFIRMED.name())
+        );
         vo.setAccuracy(comparedCount > 0 ? (int) (unmodifiedCount * 100 / comparedCount) : 0);
         return vo;
     }
 
     @Override
     public List<MonthlyVolumeVO> getMonthlyVolume(String doctorId) {
-        List<Report> reports = reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId);
+        // 数据库按月分组统计
+        List<Object[]> dbResult = reportMapper.countByMonth(doctorId);
+        Map<String, Long> monthCountMap = new HashMap<>();
+        for (Object[] row : dbResult) {
+            monthCountMap.put((String) row[0], (Long) row[1]);
+        }
 
+        // 填充最近6个月，没有数据的月份为0
         return DateUtil.getRecentMonths(6).stream().map(month -> {
             MonthlyVolumeVO vo = new MonthlyVolumeVO();
             vo.setMonth(month.get("label"));
-            vo.setCount(countReportsByMonth(reports, month.get("key")));
+            vo.setCount(monthCountMap.getOrDefault(month.get("key"), 0L));
             return vo;
         }).collect(Collectors.toList());
     }
 
     @Override
     public List<DiseaseDistributionVO> getDiseaseDistribution(String doctorId) {
-        List<Report> reports = reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId);
+        // 只查reportContent字段，不加载完整Report对象
+        List<String> contents = reportMapper.findReportContentsByDoctorId(doctorId);
 
         int total = 0;
         int[] counts = new int[DiseaseEnum.values().length];
 
-        for (Report report : reports) {
-            if (StringUtils.isBlank(report.getReportContent())) {
-                continue;
-            }
-            String content = report.getReportContent().toLowerCase();
+        for (String content : contents) {
+            String lowerContent = content.toLowerCase();
             boolean matched = false;
 
-            // 先匹配疾病类（跳过Normal）
             for (int i = 1; i < DiseaseEnum.values().length; i++) {
-                if (DiseaseEnum.values()[i].matches(content)) {
+                if (DiseaseEnum.values()[i].matches(lowerContent)) {
                     counts[i]++;
                     matched = true;
                     total++;
                 }
             }
-            // 没有匹配到疾病，检查是否正常
-            if (!matched && DiseaseEnum.NORMAL.matches(content)) {
+            if (!matched && DiseaseEnum.NORMAL.matches(lowerContent)) {
                 counts[0]++;
                 total++;
             }
@@ -112,70 +110,53 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public ComparisonStatsVO getComparisonStats(String doctorId) {
-        List<Report> compared = reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId)
-                .stream().filter(this::hasAiDraft).collect(Collectors.toList());
+        long comparedCount = reportMapper.countCompared(doctorId);
+        long unmodifiedCount = reportMapper.countUnmodified(doctorId);
+        long modifiedCount = comparedCount - unmodifiedCount;
 
-        long total = compared.size();
-        long unmodified = compared.stream().filter(this::isUnmodified).count();
-        long minorEdits = compared.stream()
-                .filter(r -> !isUnmodified(r))
-                .filter(this::isMinorEdit)
-                .count();
-        long majorChanges = total - unmodified - minorEdits;
+        // 查询被修改的报告来区分minor和major
+        List<Report> modifiedReports = reportMapper.findModifiedReports(doctorId);
+        long minorEdits = modifiedReports.stream().filter(this::isMinorEdit).count();
+        long majorChanges = modifiedCount - minorEdits;
 
         ComparisonStatsVO vo = new ComparisonStatsVO();
-        vo.setTotal(total);
-        vo.setUnmodifiedPercent(total > 0 ? (int) (unmodified * 100 / total) : 0);
-        vo.setMinorEditsPercent(total > 0 ? (int) (minorEdits * 100 / total) : 0);
-        vo.setMajorChangesPercent(total > 0 ? (int) (majorChanges * 100 / total) : 0);
+        vo.setTotal(comparedCount);
+        vo.setUnmodifiedPercent(comparedCount > 0 ? (int) (unmodifiedCount * 100 / comparedCount) : 0);
+        vo.setMinorEditsPercent(comparedCount > 0 ? (int) (minorEdits * 100 / comparedCount) : 0);
+        vo.setMajorChangesPercent(comparedCount > 0 ? (int) (majorChanges * 100 / comparedCount) : 0);
         return vo;
     }
 
     @Override
     public List<ComparisonRecordVO> getComparisonRecords(String doctorId) {
-        return reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId)
-                .stream()
-                .filter(this::hasAiDraft)
-                .filter(r -> !isUnmodified(r))
+        return reportMapper.findModifiedReports(doctorId).stream()
                 .map(this::toComparisonRecordVO)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 判断报告是否有AI原稿
-     */
-    private boolean hasAiDraft(Report report) {
-        return StringUtils.isNotBlank(report.getAiDraft()) && StringUtils.isNotBlank(report.getReportContent());
+    @Override
+    public EfficiencyVO getEfficiency(String doctorId) {
+        Double avgTime = reportMapper.avgProcessingTime(doctorId);
+        int avgTimeWithAi = avgTime != null ? avgTime.intValue() : 0;
+        int avgTimeBefore = avgReportTimeBaseline;
+        int improvement = avgTimeBefore > 0 && avgTimeWithAi > 0
+                ? (avgTimeBefore - avgTimeWithAi) * 100 / avgTimeBefore
+                : 0;
+
+        EfficiencyVO vo = new EfficiencyVO();
+        vo.setAvgTimeBefore(avgTimeBefore);
+        vo.setAvgTimeWithAi(avgTimeWithAi);
+        vo.setImprovementPercent(Math.max(improvement, 0));
+        return vo;
     }
 
-    /**
-     * 判断报告是否未被医生修改
-     */
-    private boolean isUnmodified(Report report) {
-        return report.getAiDraft().equals(report.getReportContent());
-    }
+    // ========== 私有方法 ==========
 
-    /**
-     * 判断是否为小幅修改（修改字数小于原文20%）
-     */
     private boolean isMinorEdit(Report report) {
         int diff = Math.abs(report.getAiDraft().length() - report.getReportContent().length());
         return diff < report.getAiDraft().length() * 0.2;
     }
 
-    /**
-     * 统计某个月份的报告数量
-     */
-    private long countReportsByMonth(List<Report> reports, String monthKey) {
-        return reports.stream()
-                .filter(r -> r.getCreateTime() != null)
-                .filter(r -> DateUtil.getMonthKey(r.getCreateTime()).equals(monthKey))
-                .count();
-    }
-
-    /**
-     * Report转ComparisonRecordVO
-     */
     private ComparisonRecordVO toComparisonRecordVO(Report report) {
         ComparisonRecordVO vo = new ComparisonRecordVO();
         vo.setId(report.getId());
@@ -183,38 +164,6 @@ public class StatsServiceImpl implements StatsService {
         vo.setAiDraft(report.getAiDraft());
         vo.setDoctorFinal(report.getReportContent());
         vo.setCreateTime(report.getCreateTime());
-        return vo;
-    }
-
-    @Override
-    public EfficiencyVO getEfficiency(String doctorId) {
-        List<Report> reports = reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId);
-
-        // 统计有AI辅助的报告：从创建到签发的平均时间
-        List<Report> signedReports = reports.stream()
-                .filter(r -> ReportStatusEnum.SIGNED.name().equals(r.getStatus()))
-                .filter(r -> r.getCreateTime() != null && r.getUpdateTime() != null)
-                .collect(Collectors.toList());
-
-        int avgTimeWithAi = 0;
-        if (!signedReports.isEmpty()) {
-            long totalMinutes = signedReports.stream()
-                    .mapToLong(r -> (r.getUpdateTime().getTime() - r.getCreateTime().getTime()) / (1000 * 60))
-                    .sum();
-            avgTimeWithAi = (int) (totalMinutes / signedReports.size());
-        }
-
-        // 行业平均出报告时间（无AI辅助）
-        int avgTimeBefore = avgReportTimeBaseline;
-
-        int improvement = avgTimeBefore > 0 && avgTimeWithAi > 0
-                ? (avgTimeBefore - avgTimeWithAi) * 100 / avgTimeBefore
-                : 0;
-
-        EfficiencyVO vo = new EfficiencyVO();
-        vo.setAvgTimeBefore(avgTimeBefore);
-        vo.setAvgTimeWithAi(avgTimeWithAi > 0 ? avgTimeWithAi : 0);
-        vo.setImprovementPercent(Math.max(improvement, 0));
         return vo;
     }
 }

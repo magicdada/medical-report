@@ -1,5 +1,6 @@
 package com.medical.controller;
 
+import com.medical.common.security.UserContext;
 import com.medical.service.ExportService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,8 @@ public class ExportController {
      */
     @GetMapping("/pdf/{reportId}")
     public void exportPdf(@PathVariable String reportId, HttpServletResponse response) {
-        exportService.exportPdf(reportId, response);
+        String doctorId = UserContext.getCurrentUserId();
+        exportService.exportPdf(reportId, doctorId,response);
     }
 
     /**
@@ -42,6 +44,7 @@ public class ExportController {
      */
     @GetMapping("/word/{reportId}")
     public void exportWord(@PathVariable String reportId, HttpServletResponse response) {
-        exportService.exportWord(reportId, response);
+        String doctorId = UserContext.getCurrentUserId();
+        exportService.exportWord(reportId, doctorId,response);
     }
 }

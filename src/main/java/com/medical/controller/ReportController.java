@@ -85,6 +85,6 @@ public class ReportController {
     @PutMapping("/status/{id}")
     public ResultMessage<Report> updateStatus(@PathVariable String id,
                                               @NotBlank(message = "状态不能为空") @RequestParam String status) {
-        return ResultUtil.data(reportService.updateStatus(id, status));
+        return ResultUtil.data(reportService.updateStatus(id, status,UserContext.getCurrentUserId()));
     }
 }
