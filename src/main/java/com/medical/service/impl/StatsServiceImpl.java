@@ -9,11 +9,11 @@ import com.medical.mapper.PatientMapper;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.StatsService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,14 +56,14 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public List<MonthlyVolumeVO> getMonthlyVolume(String doctorId) {
-        // 数据库按月分组统计
-        List<Object[]> dbResult = reportMapper.countByMonth(doctorId);
-        Map<String, Long> monthCountMap = new HashMap<>();
-        for (Object[] row : dbResult) {
-            monthCountMap.put((String) row[0], (Long) row[1]);
-        }
+        List<MonthlyVolumeVO> dbResult = reportMapper.countByMonth(doctorId);
+        Map<String, Long> monthCountMap = dbResult.stream()
+                .collect(Collectors.toMap(
+                        MonthlyVolumeVO::getMonth,
+                        MonthlyVolumeVO::getCount,
+                        (v1, v2) -> v1 + v2 // 遇到重复 key 时相加合并，增强容错性
+                ));
 
-        // 填充最近6个月，没有数据的月份为0
         return DateUtil.getRecentMonths(6).stream().map(month -> {
             MonthlyVolumeVO vo = new MonthlyVolumeVO();
             vo.setMonth(month.get("label"));
@@ -81,6 +81,9 @@ public class StatsServiceImpl implements StatsService {
         int[] counts = new int[DiseaseEnum.values().length];
 
         for (String content : contents) {
+            if (StringUtils.isBlank(content)){
+                continue;
+            }
             String lowerContent = content.toLowerCase();
             boolean matched = false;
 
@@ -136,7 +139,7 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public EfficiencyVO getEfficiency(String doctorId) {
-        Double avgTime = reportMapper.avgProcessingTime(doctorId);
+        Number avgTime = reportMapper.avgProcessingTime(doctorId);
         int avgTimeWithAi = avgTime != null ? avgTime.intValue() : 0;
         int avgTimeBefore = avgReportTimeBaseline;
         int improvement = avgTimeBefore > 0 && avgTimeWithAi > 0
@@ -149,8 +152,6 @@ public class StatsServiceImpl implements StatsService {
         vo.setImprovementPercent(Math.max(improvement, 0));
         return vo;
     }
-
-    // ========== 私有方法 ==========
 
     private boolean isMinorEdit(Report report) {
         int diff = Math.abs(report.getAiDraft().length() - report.getReportContent().length());

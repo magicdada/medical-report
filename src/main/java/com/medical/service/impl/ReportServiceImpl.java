@@ -4,6 +4,7 @@ import com.medical.common.ResultCode;
 import com.medical.common.ServiceException;
 import com.medical.common.enums.ReportStatusEnum;
 import com.medical.entity.dos.Report;
+import com.medical.entity.vos.ReportVO;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.ReportService;
 import lombok.extern.slf4j.Slf4j;
@@ -22,9 +23,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 诊断报告业务层实现
@@ -51,31 +54,56 @@ public class ReportServiceImpl implements ReportService {
     private static final String[] ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".dcm"};
     private static final String[] ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "application/dicom"};
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024;
+    /**
+     * 允许上传的影像数量限制
+     */
+    private static final int MAX_IMAGE_COUNT = 2;
 
     private final WebClient webClient = WebClient.builder()
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
             .build();
 
+
+
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Report generateReport(String doctorId, String patientId, MultipartFile imageFile) {
-        // 文件校验
-        validateImageFile(imageFile);
+    public Report generateReport(String doctorId, String patientId, List<MultipartFile> imageFiles) {
+        // 1. 文件数量校验
+        if (imageFiles == null || imageFiles.isEmpty()) {
+            throw new ServiceException(ResultCode.FILE_LIST_EMPTY);
+        }
+        if (imageFiles.size() > MAX_IMAGE_COUNT) {
+            throw new ServiceException(ResultCode.FILE_COUNT_EXCEED);
+        }
+
+        // 2. 文件格式校验
+        List<Path> savedPaths = new ArrayList<>();
+        for (MultipartFile imageFile : imageFiles) {
+            validateImageFile(imageFile);
+        }
+
         try {
-            // 1. 保存上传的影像文件
-            String fileName = UUID.randomUUID().toString().replace("-", "") + "_" + imageFile.getOriginalFilename();
             Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
-            Path filePath = uploadPath.resolve(fileName);
-            imageFile.transferTo(filePath.toFile());
-            log.info("影像文件保存成功：{}", filePath);
 
-            // 2. 调用Python AI推理服务（使用FileSystemResource避免大文件进内存）
+            for (MultipartFile imageFile : imageFiles) {
+                String fileName = UUID.randomUUID().toString().replace("-", "")
+                        + "_" + imageFile.getOriginalFilename();
+                Path filePath = uploadPath.resolve(fileName);
+//                imageFile.transferTo(filePath.toFile());
+                imageFile.transferTo(filePath.toAbsolutePath().toFile());
+                savedPaths.add(filePath);
+                log.info("影像文件保存成功：{}", filePath);
+            }
+
+            // 3. 调用Python AI推理服务（使用FileSystemResource避免大文件进内存）
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
-            builder.part("file", new FileSystemResource(filePath.toFile()))
-                    .contentType(MediaType.IMAGE_JPEG);
+            for (Path savedPath : savedPaths) {
+                builder.part("files", new FileSystemResource(savedPath.toFile()))
+                        .contentType(MediaType.IMAGE_JPEG);
+            }
 
             Map result = webClient.post()
                     .uri(aiServiceUrl + "/predict")
@@ -87,13 +115,18 @@ public class ReportServiceImpl implements ReportService {
 
             log.info("AI推理完成，结果：{}", result);
 
-            // 3. 组装报告
+            // 4. 组装报告（多个路径用逗号分隔存储）
+            String imagePaths = savedPaths.stream()
+                    .map(Path::toString)
+                    .collect(Collectors.joining(","));
+
             String reportContent = result != null ? (String) result.get("report") : "";
             String heatmapPath = result != null ? (String) result.get("heatmap_path") : "";
+
             Report report = new Report();
             report.setDoctorId(doctorId);
             report.setPatientId(patientId);
-            report.setImagePath(filePath.toString());
+            report.setImagePath(imagePaths);
             report.setReportContent(reportContent);
             report.setAiDraft(reportContent);
             report.setHeatmapPath(heatmapPath);
@@ -101,6 +134,7 @@ public class ReportServiceImpl implements ReportService {
             report.setCreateBy(doctorId);
             reportMapper.save(report);
             log.info("诊断报告生成成功，ID：{}", report.getId());
+
             return report;
 
         } catch (IOException e) {
@@ -168,8 +202,8 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public List<Report> getByDoctorId(String doctorId) {
-        return reportMapper.findByDoctorIdOrderByCreateTimeDesc(doctorId);
+    public List<ReportVO> getByDoctorId(String doctorId) {
+        return reportMapper.findVOByDoctorId(doctorId);
     }
 
     @Override

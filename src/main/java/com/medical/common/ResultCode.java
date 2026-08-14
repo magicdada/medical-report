@@ -34,6 +34,8 @@ public enum ResultCode {
     FILE_SIZE_EXCEED(50003, "文件大小超出限制"),
     FILE_EXTENSION_NOT_ALLOWED(50004, "不允许的文件扩展名"),
     FILE_UPLOAD_ERROR(50005, "文件上传失败"),
+    FILE_LIST_EMPTY(50006, "请至少上传一张影像文件"),
+    FILE_COUNT_EXCEED(50007, "最多支持上传2张影像文件（正位+侧位）"),
 
     AI_SERVICE_ERROR(60001, "AI推理服务异常，请稍后重试"),
     AI_SERVICE_TIMEOUT(60002, "AI推理服务超时");

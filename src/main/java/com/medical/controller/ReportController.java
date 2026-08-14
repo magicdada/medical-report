@@ -5,6 +5,7 @@ import com.medical.common.util.ResultUtil;
 import com.medical.common.security.AuthUser;
 import com.medical.common.security.UserContext;
 import com.medical.entity.dos.Report;
+import com.medical.entity.vos.ReportVO;
 import com.medical.service.ReportService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,15 +31,15 @@ public class ReportController {
      * 上传影像并生成报告
      *
      * @param patientId 患者ID
-     * @param file      影像文件
+     * @param files     影像文件列表
      * @return 报告信息
      */
     @PostMapping("/generate")
     public ResultMessage<Report> generate(@NotBlank(message = "患者ID不能为空") @RequestParam String patientId,
-                                          @RequestParam("file") MultipartFile file) {
+                                          @RequestParam("files") List<MultipartFile> files) {
         AuthUser authUser = UserContext.getCurrentUser();
         String doctorId = authUser.getId();
-        return ResultUtil.data(reportService.generateReport(doctorId, patientId, file));
+        return ResultUtil.data(reportService.generateReport(doctorId, patientId, files));
     }
 
     /**
@@ -69,7 +70,7 @@ public class ReportController {
      * @return 报告列表
      */
     @GetMapping("/list/mine")
-    public ResultMessage<List<Report>> getMyReports() {
+    public ResultMessage<List<ReportVO>> getMyReports() {
         AuthUser authUser = UserContext.getCurrentUser();
         String doctorId = authUser.getId();
         return ResultUtil.data(reportService.getByDoctorId(doctorId));

@@ -1,6 +1,8 @@
 package com.medical.mapper;
 
 import com.medical.entity.dos.Report;
+import com.medical.entity.vos.MonthlyVolumeVO;
+import com.medical.entity.vos.ReportVO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,53 +16,108 @@ import java.util.List;
  */
 public interface ReportMapper extends JpaRepository<Report, String> {
 
+    /**
+     * 根据患者ID查询报告列表
+     *
+     * @param patientId 患者ID
+     * @return 报告列表（按创建时间倒序）
+     */
     List<Report> findByPatientIdOrderByCreateTimeDesc(String patientId);
 
+    /**
+     * 根据医生ID查询报告列表
+     *
+     * @param doctorId 医生ID
+     * @return 报告列表（按创建时间倒序）
+     */
     List<Report> findByDoctorIdOrderByCreateTimeDesc(String doctorId);
 
     /**
+     * 根据医生ID查询报告列表
+     * @param doctorId
+     * @return 报告列表（按创建时间倒序）
+     */
+    @Query("SELECT new com.medical.entity.vos.ReportVO(" +
+            "r.id, r.doctorId, r.patientId, p.patientNo, p.name, " +
+            "r.imagePath, r.reportContent, r.aiDraft, r.heatmapPath, " +
+            "r.pdfPath, r.status, r.createTime) " +
+            "FROM Report r LEFT JOIN Patient p ON r.patientId = p.id " +
+            "WHERE r.doctorId = :doctorId AND r.deleteFlag = false " +
+            "ORDER BY r.createTime DESC")
+    List<ReportVO> findVOByDoctorId(@Param("doctorId") String doctorId);
+
+    /**
      * 统计医生的报告总数
+     *
+     * @param doctorId 医生ID
+     * @return 报告总数
      */
     long countByDoctorId(String doctorId);
 
     /**
      * 按状态统计医生的报告数
+     *
+     * @param doctorId 医生ID
+     * @param status   报告状态
+     * @return 报告数量
      */
     long countByDoctorIdAndStatus(String doctorId, String status);
 
     /**
      * 统计未被修改的报告数（aiDraft等于reportContent）
+     *
+     * @param doctorId 医生ID
+     * @return 未修改的报告数量
      */
     @Query("SELECT COUNT(r) FROM Report r WHERE r.doctorId = :doctorId AND r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL AND r.aiDraft = r.reportContent")
     long countUnmodified(@Param("doctorId") String doctorId);
 
     /**
-     * 统计有AI原稿的报告数
+     * 统计有AI原稿的报告数（用于计算AI准确率的分母）
+     *
+     * @param doctorId 医生ID
+     * @return 有AI原稿的报告数量
      */
     @Query("SELECT COUNT(r) FROM Report r WHERE r.doctorId = :doctorId AND r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL")
     long countCompared(@Param("doctorId") String doctorId);
 
     /**
-     * 按月份统计报告数
+     * 按月份分组统计报告数量
+     *
+     * @param doctorId 医生ID
+     * @return 月度统计列表
      */
-    @Query(value = "SELECT DATE_FORMAT(create_time, '%Y-%m') AS month, COUNT(*) FROM report WHERE doctor_id = :doctorId GROUP BY DATE_FORMAT(create_time, '%Y-%m') ORDER BY month", nativeQuery = true)
-    List<Object[]> countByMonth(@Param("doctorId") String doctorId);
+    @Query("SELECT new com.medical.entity.vos.MonthlyVolumeVO(" +
+            "FUNCTION('DATE_FORMAT', r.createTime, '%Y-%m'), COUNT(r)) " +
+            "FROM Report r WHERE r.doctorId = ?1 AND r.deleteFlag = false " +
+            "GROUP BY FUNCTION('DATE_FORMAT', r.createTime, '%Y-%m') " +
+            "ORDER BY FUNCTION('DATE_FORMAT', r.createTime, '%Y-%m')")
+    List<MonthlyVolumeVO> countByMonth(String doctorId);
 
     /**
-     * 查询报告内容（仅用于疾病分布统计，只取reportContent字段）
+     * 查询报告内容列表（仅取reportContent字段，用于疾病分布统计）
+     *
+     * @param doctorId 医生ID
+     * @return 报告内容列表
      */
     @Query("SELECT r.reportContent FROM Report r WHERE r.doctorId = :doctorId AND r.reportContent IS NOT NULL")
     List<String> findReportContentsByDoctorId(@Param("doctorId") String doctorId);
 
     /**
-     * 查询有差异的对比记录（aiDraft不等于reportContent）
+     * 查询医生修改过的报告（aiDraft不等于reportContent）
+     *
+     * @param doctorId 医生ID
+     * @return 被修改的报告列表（按创建时间倒序）
      */
     @Query("SELECT r FROM Report r WHERE r.doctorId = :doctorId AND r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL AND r.aiDraft <> r.reportContent ORDER BY r.createTime DESC")
     List<Report> findModifiedReports(@Param("doctorId") String doctorId);
 
     /**
-     * 统计已签发报告的平均处理时间（分钟）
+     * 统计已签发报告的平均处理时间
+     *
+     * @param doctorId 医生ID
+     * @return 平均处理时间（分钟）
      */
     @Query(value = "SELECT AVG(TIMESTAMPDIFF(MINUTE, create_time, update_time)) FROM report WHERE doctor_id = :doctorId AND status = 'SIGNED' AND create_time IS NOT NULL AND update_time IS NOT NULL", nativeQuery = true)
-    Double avgProcessingTime(@Param("doctorId") String doctorId);
+    Number avgProcessingTime(@Param("doctorId") String doctorId);
 }

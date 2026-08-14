@@ -1,6 +1,8 @@
 package com.medical.entity.vos;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 月度报告量VO
@@ -9,6 +11,8 @@ import lombok.Data;
  * @since 2026/08/11
  */
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class MonthlyVolumeVO {
 
     /** 月份标签 */

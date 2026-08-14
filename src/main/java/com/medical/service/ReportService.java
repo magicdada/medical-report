@@ -1,8 +1,8 @@
 package com.medical.service;
 
 import com.medical.entity.dos.Report;
+import com.medical.entity.vos.ReportVO;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 
 /**
@@ -15,12 +15,12 @@ public interface ReportService {
     /**
      * 生成诊断报告
      *
-     * @param doctorId  医生ID
-     * @param patientId 患者ID
-     * @param imageFile 影像文件
+     * @param doctorId   医生ID
+     * @param patientId  患者ID
+     * @param imageFiles 影像文件列表（正位+侧位）
      * @return 报告信息
      */
-    Report generateReport(String doctorId, String patientId, MultipartFile imageFile);
+    Report generateReport(String doctorId, String patientId, List<MultipartFile> imageFiles);
 
     /**
      * 根据ID获取报告
@@ -44,7 +44,7 @@ public interface ReportService {
      * @param doctorId 医生ID
      * @return 报告列表
      */
-    List<Report> getByDoctorId(String doctorId);
+    List<ReportVO> getByDoctorId(String doctorId);
 
     /**
      * 更新报告状态

@@ -30,6 +30,7 @@ ignored:
     - /api/auth/login
     - /api/auth/register
     - /api/auth/refresh/**
+    - /uploads/**
     - /druid/**
     - /v3/api-docs
     - /v3/api-docs/**
@@ -54,7 +55,7 @@ logging:
 # 调用模型地址
 ai:
   service:
-    url: http://192.168.x.x:8000
+    url: http://192.168.1.81:8000
   baseline:
     avg-report-time: 10
 
