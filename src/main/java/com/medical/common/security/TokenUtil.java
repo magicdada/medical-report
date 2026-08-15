@@ -31,7 +31,7 @@ public class TokenUtil {
     /**
      * accessToken过期时间（分钟）
      */
-    private static final long TOKEN_EXPIRE_TIME = 60 * 24;
+    private static final long TOKEN_EXPIRE_TIME = 30;
 
     /**
      * refreshToken过期时间倍数

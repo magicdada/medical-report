@@ -1,9 +1,10 @@
 package com.medical.service.impl;
 
 import com.medical.common.enums.DiseaseEnum;
-import com.medical.common.enums.ReportStatusEnum;
 import com.medical.common.util.DateUtil;
 import com.medical.entity.dos.Report;
+import com.medical.entity.dto.ComparisonStatsDTO;
+import com.medical.entity.dto.ReportOverviewDTO;
 import com.medical.entity.vos.*;
 import com.medical.mapper.PatientMapper;
 import com.medical.mapper.ReportMapper;
@@ -20,7 +21,6 @@ import java.util.stream.Collectors;
 
 /**
  * 统计业务层实现
- *
  * @author wangda
  * @since 2026/08/11
  */
@@ -39,18 +39,28 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public OverviewVO getOverview(String doctorId) {
-        long comparedCount = reportMapper.countCompared(doctorId);
-        long unmodifiedCount = reportMapper.countUnmodified(doctorId);
+        // 一次性查出聚合数据
+        ReportOverviewDTO stats = reportMapper.selectOverviewStats(doctorId);
 
         OverviewVO vo = new OverviewVO();
         vo.setTotalPatients(patientMapper.count());
-        vo.setTotalReports(reportMapper.countByDoctorId(doctorId));
-        vo.setDraftCount(reportMapper.countByDoctorIdAndStatus(doctorId, ReportStatusEnum.DRAFT.name()));
-        vo.setSignedCount(
-                reportMapper.countByDoctorIdAndStatus(doctorId, ReportStatusEnum.SIGNED.name())
-                        + reportMapper.countByDoctorIdAndStatus(doctorId, ReportStatusEnum.CONFIRMED.name())
-        );
-        vo.setAccuracy(comparedCount > 0 ? (int) (unmodifiedCount * 100 / comparedCount) : 0);
+
+        if (stats != null) {
+            // 如果某医生一条报告都没有，SUM 可能会返回
+            long totalReports = stats.getTotalReports() != null ? stats.getTotalReports() : 0L;
+            long draftCount = stats.getDraftCount() != null ? stats.getDraftCount() : 0L;
+            long signedCount = stats.getSignedCount() != null ? stats.getSignedCount() : 0L;
+            long comparedCount = stats.getComparedCount() != null ? stats.getComparedCount() : 0L;
+            long unmodifiedCount = stats.getUnmodifiedCount() != null ? stats.getUnmodifiedCount() : 0L;
+
+            vo.setTotalReports(totalReports);
+            vo.setDraftCount(draftCount);
+            vo.setSignedCount(signedCount);
+
+            // 计算准确率
+            vo.setAccuracy(comparedCount > 0 ? (int) (unmodifiedCount * 100 / comparedCount) : 0);
+        }
+
         return vo;
     }
 
@@ -61,7 +71,7 @@ public class StatsServiceImpl implements StatsService {
                 .collect(Collectors.toMap(
                         MonthlyVolumeVO::getMonth,
                         MonthlyVolumeVO::getCount,
-                        (v1, v2) -> v1 + v2 // 遇到重复 key 时相加合并，增强容错性
+                        (v1, v2) -> v1 + v2
                 ));
 
         return DateUtil.getRecentMonths(6).stream().map(month -> {
@@ -113,20 +123,31 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public ComparisonStatsVO getComparisonStats(String doctorId) {
-        long comparedCount = reportMapper.countCompared(doctorId);
-        long unmodifiedCount = reportMapper.countUnmodified(doctorId);
-        long modifiedCount = comparedCount - unmodifiedCount;
-
-        // 查询被修改的报告来区分minor和major
-        List<Report> modifiedReports = reportMapper.findModifiedReports(doctorId);
-        long minorEdits = modifiedReports.stream().filter(this::isMinorEdit).count();
-        long majorChanges = modifiedCount - minorEdits;
+        // 一次 SQL 聚合查出所有核心指标
+        ComparisonStatsDTO stats = reportMapper.selectComparisonStats(doctorId);
 
         ComparisonStatsVO vo = new ComparisonStatsVO();
-        vo.setTotal(comparedCount);
-        vo.setUnmodifiedPercent(comparedCount > 0 ? (int) (unmodifiedCount * 100 / comparedCount) : 0);
-        vo.setMinorEditsPercent(comparedCount > 0 ? (int) (minorEdits * 100 / comparedCount) : 0);
-        vo.setMajorChangesPercent(comparedCount > 0 ? (int) (majorChanges * 100 / comparedCount) : 0);
+        if (stats == null || stats.getTotal() == null || stats.getTotal() == 0) {
+            vo.setTotal(0L);
+            vo.setUnmodifiedPercent(0);
+            vo.setMinorEditsPercent(0);
+            vo.setMajorChangesPercent(0);
+            return vo;
+        }
+
+        long total = stats.getTotal();
+        long unmodifiedCount = stats.getUnmodifiedCount() != null ? stats.getUnmodifiedCount() : 0L;
+        long minorEdits = stats.getMinorEditsCount() != null ? stats.getMinorEditsCount() : 0L;
+
+        // 大改数量 = 总修改数 - 微调数
+        long modifiedCount = Math.max(0, total - unmodifiedCount);
+        long majorChanges = Math.max(0, modifiedCount - minorEdits);
+
+        vo.setTotal(total);
+        vo.setUnmodifiedPercent((int) (unmodifiedCount * 100 / total));
+        vo.setMinorEditsPercent((int) (minorEdits * 100 / total));
+        vo.setMajorChangesPercent((int) (majorChanges * 100 / total));
+
         return vo;
     }
 
@@ -151,11 +172,6 @@ public class StatsServiceImpl implements StatsService {
         vo.setAvgTimeWithAi(avgTimeWithAi);
         vo.setImprovementPercent(Math.max(improvement, 0));
         return vo;
-    }
-
-    private boolean isMinorEdit(Report report) {
-        int diff = Math.abs(report.getAiDraft().length() - report.getReportContent().length());
-        return diff < report.getAiDraft().length() * 0.2;
     }
 
     private ComparisonRecordVO toComparisonRecordVO(Report report) {

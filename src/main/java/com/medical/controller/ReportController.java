@@ -60,7 +60,7 @@ public class ReportController {
      * @return 报告列表
      */
     @GetMapping("/list/patient/{patientId}")
-    public ResultMessage<List<Report>> getByPatient(@PathVariable String patientId) {
+    public ResultMessage<List<ReportVO>> getByPatient(@PathVariable String patientId) {
         return ResultUtil.data(reportService.getByPatientId(patientId));
     }
 

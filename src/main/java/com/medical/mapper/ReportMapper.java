@@ -1,6 +1,8 @@
 package com.medical.mapper;
 
 import com.medical.entity.dos.Report;
+import com.medical.entity.dto.ComparisonStatsDTO;
+import com.medical.entity.dto.ReportOverviewDTO;
 import com.medical.entity.vos.MonthlyVolumeVO;
 import com.medical.entity.vos.ReportVO;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,19 +20,17 @@ public interface ReportMapper extends JpaRepository<Report, String> {
 
     /**
      * 根据患者ID查询报告列表
-     *
-     * @param patientId 患者ID
+     * @param patientId
      * @return 报告列表（按创建时间倒序）
      */
-    List<Report> findByPatientIdOrderByCreateTimeDesc(String patientId);
-
-    /**
-     * 根据医生ID查询报告列表
-     *
-     * @param doctorId 医生ID
-     * @return 报告列表（按创建时间倒序）
-     */
-    List<Report> findByDoctorIdOrderByCreateTimeDesc(String doctorId);
+    @Query("SELECT new com.medical.entity.vos.ReportVO(" +
+            "r.id, r.doctorId, r.patientId, p.patientNo, p.name, " +
+            "r.imagePath, r.reportContent, r.aiDraft, r.heatmapPath, " +
+            "r.pdfPath, r.status, r.createTime) " +
+            "FROM Report r LEFT JOIN Patient p ON r.patientId = p.id " +
+            "WHERE r.patientId = :patientId AND r.deleteFlag = false " +
+            "ORDER BY r.createTime DESC")
+    List<ReportVO> findVOByPatientId(@Param("patientId") String patientId);
 
     /**
      * 根据医生ID查询报告列表
@@ -47,39 +47,35 @@ public interface ReportMapper extends JpaRepository<Report, String> {
     List<ReportVO> findVOByDoctorId(@Param("doctorId") String doctorId);
 
     /**
-     * 统计医生的报告总数
+     * 聚合查询医生的报告概览统计数据
      *
      * @param doctorId 医生ID
-     * @return 报告总数
+     * @return 报告概览DTO
      */
-    long countByDoctorId(String doctorId);
+    @Query("SELECT new com.medical.entity.dto.ReportOverviewDTO(" +
+            "  COUNT(r), " +
+            "  SUM(CASE WHEN r.status = 'DRAFT' THEN 1L ELSE 0L END), " +
+            "  SUM(CASE WHEN r.status = 'SIGNED' OR r.status = 'CONFIRMED' THEN 1L ELSE 0L END), " +
+            "  SUM(CASE WHEN r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL THEN 1L ELSE 0L END), " +
+            "  SUM(CASE WHEN r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL AND r.aiDraft = r.reportContent THEN 1L ELSE 0L END)" +
+            ") " +
+            "FROM Report r WHERE r.doctorId = :doctorId")
+    ReportOverviewDTO selectOverviewStats(@Param("doctorId") String doctorId);
 
     /**
-     * 按状态统计医生的报告数
+     * 聚合查询医生的报告对比统计指标
      *
      * @param doctorId 医生ID
-     * @param status   报告状态
-     * @return 报告数量
+     * @return 对比统计DTO
      */
-    long countByDoctorIdAndStatus(String doctorId, String status);
-
-    /**
-     * 统计未被修改的报告数（aiDraft等于reportContent）
-     *
-     * @param doctorId 医生ID
-     * @return 未修改的报告数量
-     */
-    @Query("SELECT COUNT(r) FROM Report r WHERE r.doctorId = :doctorId AND r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL AND r.aiDraft = r.reportContent")
-    long countUnmodified(@Param("doctorId") String doctorId);
-
-    /**
-     * 统计有AI原稿的报告数（用于计算AI准确率的分母）
-     *
-     * @param doctorId 医生ID
-     * @return 有AI原稿的报告数量
-     */
-    @Query("SELECT COUNT(r) FROM Report r WHERE r.doctorId = :doctorId AND r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL")
-    long countCompared(@Param("doctorId") String doctorId);
+    @Query("SELECT new com.medical.entity.dto.ComparisonStatsDTO(" +
+            "  SUM(CASE WHEN r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL THEN 1L ELSE 0L END), " +
+            "  SUM(CASE WHEN r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL AND r.aiDraft = r.reportContent THEN 1L ELSE 0L END), " +
+            "  SUM(CASE WHEN r.aiDraft IS NOT NULL AND r.reportContent IS NOT NULL AND r.aiDraft <> r.reportContent " +
+            "           AND ABS(LENGTH(r.aiDraft) - LENGTH(r.reportContent)) < LENGTH(r.aiDraft) * 0.2 THEN 1L ELSE 0L END)" +
+            ") " +
+            "FROM Report r WHERE r.doctorId = :doctorId")
+    ComparisonStatsDTO selectComparisonStats(@Param("doctorId") String doctorId);
 
     /**
      * 按月份分组统计报告数量

@@ -36,7 +36,7 @@ public interface ReportService {
      * @param patientId 患者ID
      * @return 报告列表
      */
-    List<Report> getByPatientId(String patientId);
+    List<ReportVO> getByPatientId(String patientId);
 
     /**
      * 根据医生ID获取报告列表

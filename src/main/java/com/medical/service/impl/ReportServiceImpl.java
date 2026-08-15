@@ -92,7 +92,6 @@ public class ReportServiceImpl implements ReportService {
                 String fileName = UUID.randomUUID().toString().replace("-", "")
                         + "_" + imageFile.getOriginalFilename();
                 Path filePath = uploadPath.resolve(fileName);
-//                imageFile.transferTo(filePath.toFile());
                 imageFile.transferTo(filePath.toAbsolutePath().toFile());
                 savedPaths.add(filePath);
                 log.info("影像文件保存成功：{}", filePath);
@@ -197,8 +196,8 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public List<Report> getByPatientId(String patientId) {
-        return reportMapper.findByPatientIdOrderByCreateTimeDesc(patientId);
+    public List<ReportVO> getByPatientId(String patientId) {
+        return reportMapper.findVOByPatientId(patientId);
     }
 
     @Override
