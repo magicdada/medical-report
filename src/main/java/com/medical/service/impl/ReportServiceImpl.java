@@ -206,6 +206,19 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    public Report updateContent(String id, String reportContent, String doctorId) {
+        Report report = reportMapper.findById(id)
+                .orElseThrow(() -> new ServiceException(ResultCode.REPORT_NOT_EXIST));
+        if (!report.getDoctorId().equals(doctorId)) {
+            throw new ServiceException(ResultCode.REPORT_NOT_OWN);
+        }
+        report.setReportContent(reportContent);
+        reportMapper.save(report);
+        log.info("报告内容更新：{}", id);
+        return report;
+    }
+
+    @Override
     public Report updateStatus(String id, String status, String doctorId) {
         Report report = reportMapper.findById(id).orElse(null);
         if (report == null) {

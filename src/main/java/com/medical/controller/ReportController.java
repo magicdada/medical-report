@@ -9,6 +9,7 @@ import com.medical.entity.vos.ReportVO;
 import com.medical.service.ReportService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import javax.validation.constraints.NotBlank;
@@ -21,6 +22,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
+@Validated
 @RequestMapping("/api/report")
 public class ReportController {
 
@@ -74,6 +76,19 @@ public class ReportController {
         AuthUser authUser = UserContext.getCurrentUser();
         String doctorId = authUser.getId();
         return ResultUtil.data(reportService.getByDoctorId(doctorId));
+    }
+
+    /**
+     * 更新报告内容（医生编辑）
+     *
+     * @param id             报告ID
+     * @param reportContent  修改后的报告内容
+     * @return 报告信息
+     */
+    @PutMapping("/content/{id}")
+    public ResultMessage<Report> updateContent(@PathVariable String id,
+                                               @NotBlank(message = "报告内容不能为空") @RequestParam String reportContent) {
+        return ResultUtil.data(reportService.updateContent(id, reportContent, UserContext.getCurrentUserId()));
     }
 
     /**

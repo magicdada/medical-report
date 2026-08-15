@@ -28,6 +28,7 @@ public enum ResultCode {
     REPORT_NOT_EXIST(40001, "报告不存在"),
     REPORT_GENERATE_ERROR(40002, "报告生成失败"),
     REPORT_STATUS_ERROR(40003, "报告状态异常"),
+    REPORT_NOT_OWN(40004, "无权操作他人的报告"),
 
     FILE_NOT_EXIST_ERROR(50001, "上传文件不能为空"),
     FILE_TYPE_NOT_SUPPORT(50002, "不支持的文件类型"),

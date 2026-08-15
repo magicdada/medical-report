@@ -47,6 +47,16 @@ public interface ReportService {
     List<ReportVO> getByDoctorId(String doctorId);
 
     /**
+     * 更新报告内容（医生编辑）
+     *
+     * @param id             报告ID
+     * @param reportContent  修改后的报告内容
+     * @param doctorId       当前医生ID
+     * @return 报告信息
+     */
+    Report updateContent(String id, String reportContent, String doctorId);
+
+    /**
      * 更新报告状态
      *
      * @param id       报告ID

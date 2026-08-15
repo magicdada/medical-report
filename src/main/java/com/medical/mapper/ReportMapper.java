@@ -26,7 +26,7 @@ public interface ReportMapper extends JpaRepository<Report, String> {
     @Query("SELECT new com.medical.entity.vos.ReportVO(" +
             "r.id, r.doctorId, r.patientId, p.patientNo, p.name, " +
             "r.imagePath, r.reportContent, r.aiDraft, r.heatmapPath, " +
-            "r.pdfPath, r.status, r.createTime) " +
+            "r.pdfPath, r.status, r.createTime, r.updateTime) " +
             "FROM Report r LEFT JOIN Patient p ON r.patientId = p.id " +
             "WHERE r.patientId = :patientId AND r.deleteFlag = false " +
             "ORDER BY r.createTime DESC")
@@ -40,7 +40,7 @@ public interface ReportMapper extends JpaRepository<Report, String> {
     @Query("SELECT new com.medical.entity.vos.ReportVO(" +
             "r.id, r.doctorId, r.patientId, p.patientNo, p.name, " +
             "r.imagePath, r.reportContent, r.aiDraft, r.heatmapPath, " +
-            "r.pdfPath, r.status, r.createTime) " +
+            "r.pdfPath, r.status, r.createTime, r.updateTime) " +
             "FROM Report r LEFT JOIN Patient p ON r.patientId = p.id " +
             "WHERE r.doctorId = :doctorId AND r.deleteFlag = false " +
             "ORDER BY r.createTime DESC")
