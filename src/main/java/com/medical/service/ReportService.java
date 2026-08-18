@@ -23,12 +23,12 @@ public interface ReportService {
     Report generateReport(String doctorId, String patientId, List<MultipartFile> imageFiles);
 
     /**
-     * 根据ID获取报告
+     * 根据ID获取报告详情
      *
      * @param id 报告ID
      * @return 报告信息
      */
-    Report getById(String id);
+    ReportVO getDetail(String id);
 
     /**
      * 根据患者ID获取报告列表

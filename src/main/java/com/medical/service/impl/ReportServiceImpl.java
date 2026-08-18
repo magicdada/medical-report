@@ -1,9 +1,11 @@
 package com.medical.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medical.common.ResultCode;
 import com.medical.common.ServiceException;
 import com.medical.common.enums.ReportStatusEnum;
 import com.medical.entity.dos.Report;
+import com.medical.entity.dto.AiPredictDTO;
 import com.medical.entity.vos.ReportVO;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.ReportService;
@@ -25,7 +27,6 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -104,12 +105,12 @@ public class ReportServiceImpl implements ReportService {
                         .contentType(MediaType.IMAGE_JPEG);
             }
 
-            Map result = webClient.post()
+            AiPredictDTO result = webClient.post()
                     .uri(aiServiceUrl + "/predict")
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(Duration.ofSeconds(60))
+                    .bodyToMono(AiPredictDTO.class)
+                    .timeout(Duration.ofSeconds(120))
                     .block();
 
             log.info("AI推理完成，结果：{}", result);
@@ -118,21 +119,40 @@ public class ReportServiceImpl implements ReportService {
             String imagePaths = savedPaths.stream()
                     .map(Path::toString)
                     .collect(Collectors.joining(","));
+            String findingsKeywords = "";
+            String heatmapData = "";
+            Double reportConfidence = null;
 
-            String reportContent = result != null ? (String) result.get("report") : "";
-            String heatmapPath = result != null ? (String) result.get("heatmap_path") : "";
+            if (result != null) {
+                ObjectMapper mapper = new ObjectMapper();
+                try {
+                    if (result.getFindings() != null) {
+                        findingsKeywords = mapper.writeValueAsString(result.getFindings());
+                    }
+                    if (result.getHeatmaps() != null) {
+                        heatmapData = mapper.writeValueAsString(result.getHeatmaps());
+                    }
+                } catch (Exception ignored) {}
+
+//                if (result.getConfidence() != null) {
+//                    reportConfidence = result.getConfidence().getReport_confidence();
+//                }
+            }
 
             Report report = new Report();
             report.setDoctorId(doctorId);
             report.setPatientId(patientId);
             report.setImagePath(imagePaths);
-            report.setReportContent(reportContent);
-            report.setAiDraft(reportContent);
-            report.setHeatmapPath(heatmapPath);
+            report.setReportContent(result != null ? result.getReport() : "");
+            report.setAiDraft(result != null ? result.getReport() : "");
+            report.setImpression(result != null ? result.getImpression() : "");
+//            report.setGate(result != null ? result.getGate() : "");
+            report.setReportConfidence(reportConfidence);
+            report.setFindingsKeywords(findingsKeywords);
+            report.setHeatmapPath(heatmapData);
             report.setStatus(ReportStatusEnum.DRAFT.name());
             report.setCreateBy(doctorId);
             reportMapper.save(report);
-            log.info("诊断报告生成成功，ID：{}", report.getId());
 
             return report;
 
@@ -191,8 +211,8 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public Report getById(String id) {
-        return reportMapper.findById(id).orElse(null);
+    public ReportVO getDetail(String id) {
+        return reportMapper.findVOById(id);
     }
 
     @Override

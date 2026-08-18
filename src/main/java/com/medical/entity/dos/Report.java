@@ -33,7 +33,19 @@ public class Report extends BaseEntity {
     @Column(name = "ai_draft", columnDefinition = "TEXT")
     private String aiDraft;
 
-    @Column(name = "heatmap_path", length = 255)
+    @Column(columnDefinition = "TEXT")
+    private String impression;
+
+    @Column(length = 20)
+    private String gate;
+
+    @Column(name = "report_confidence")
+    private Double reportConfidence;
+
+    @Column(name = "findings_keywords", columnDefinition = "TEXT")
+    private String findingsKeywords;
+
+    @Column(name = "heatmap_path", columnDefinition = "LONGTEXT")
     private String heatmapPath;
 
     @Column(name = "pdf_path", length = 255)

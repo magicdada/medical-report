@@ -45,14 +45,14 @@ public class ReportController {
     }
 
     /**
-     * 根据ID获取报告
+     * 根据ID获取报告详情
      *
      * @param id 报告ID
      * @return 报告信息
      */
-    @GetMapping("/get/{id}")
-    public ResultMessage<Report> get(@PathVariable String id) {
-        return ResultUtil.data(reportService.getById(id));
+    @GetMapping("/getDetail/{id}")
+    public ResultMessage<ReportVO> getDetail(@PathVariable String id) {
+        return ResultUtil.data(reportService.getDetail(id));
     }
 
     /**

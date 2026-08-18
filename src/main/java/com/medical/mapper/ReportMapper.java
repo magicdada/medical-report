@@ -19,13 +19,29 @@ import java.util.List;
 public interface ReportMapper extends JpaRepository<Report, String> {
 
     /**
-     * 根据患者ID查询报告列表
-     * @param patientId
-     * @return 报告列表（按创建时间倒序）
+     * 查询报告详情（关联患者信息）
+     *
+     * @param id 报告ID
+     * @return 报告VO
      */
     @Query("SELECT new com.medical.entity.vos.ReportVO(" +
             "r.id, r.doctorId, r.patientId, p.patientNo, p.name, " +
-            "r.imagePath, r.reportContent, r.aiDraft, r.heatmapPath, " +
+            "r.imagePath, r.reportContent, r.aiDraft, r.impression, " +
+            "r.gate, r.reportConfidence, r.findingsKeywords, r.heatmapPath, " +
+            "r.pdfPath, r.status, r.createTime, r.updateTime) " +
+            "FROM Report r LEFT JOIN Patient p ON r.patientId = p.id " +
+            "WHERE r.id = :id")
+    ReportVO findVOById(@Param("id") String id);
+
+    /**
+     * 查询患者的报告列表（关联患者信息）
+     * @param patientId 患者ID
+     * @return 报告VO列表
+     */
+    @Query("SELECT new com.medical.entity.vos.ReportVO(" +
+            "r.id, r.doctorId, r.patientId, p.patientNo, p.name, " +
+            "r.imagePath, r.reportContent, r.aiDraft, r.impression, " +
+            "r.gate, r.reportConfidence, r.findingsKeywords, r.heatmapPath, " +
             "r.pdfPath, r.status, r.createTime, r.updateTime) " +
             "FROM Report r LEFT JOIN Patient p ON r.patientId = p.id " +
             "WHERE r.patientId = :patientId AND r.deleteFlag = false " +
@@ -33,13 +49,14 @@ public interface ReportMapper extends JpaRepository<Report, String> {
     List<ReportVO> findVOByPatientId(@Param("patientId") String patientId);
 
     /**
-     * 根据医生ID查询报告列表
-     * @param doctorId
-     * @return 报告列表（按创建时间倒序）
+     * 查询医生的报告列表（关联患者信息）
+     * @param doctorId 医生ID
+     * @return 报告VO列表
      */
     @Query("SELECT new com.medical.entity.vos.ReportVO(" +
             "r.id, r.doctorId, r.patientId, p.patientNo, p.name, " +
-            "r.imagePath, r.reportContent, r.aiDraft, r.heatmapPath, " +
+            "r.imagePath, r.reportContent, r.aiDraft, r.impression, " +
+            "r.gate, r.reportConfidence, r.findingsKeywords, r.heatmapPath, " +
             "r.pdfPath, r.status, r.createTime, r.updateTime) " +
             "FROM Report r LEFT JOIN Patient p ON r.patientId = p.id " +
             "WHERE r.doctorId = :doctorId AND r.deleteFlag = false " +

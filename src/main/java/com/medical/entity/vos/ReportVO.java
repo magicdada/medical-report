@@ -42,6 +42,18 @@ public class ReportVO {
     /** AI原稿 */
     private String aiDraft;
 
+    /** 印象 */
+    private String impression;
+
+    /** 检测门控状态 */
+    private String gate;
+
+    /** AI报告置信度 */
+    private Double reportConfidence;
+
+    /** 检测到的疾病关键词（JSON） */
+    private String findingsKeywords;
+
     /** 热力图路径 */
     private String heatmapPath;
 
