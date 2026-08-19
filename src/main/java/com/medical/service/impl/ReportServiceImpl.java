@@ -6,6 +6,8 @@ import com.medical.common.ServiceException;
 import com.medical.common.enums.ReportStatusEnum;
 import com.medical.entity.dos.Report;
 import com.medical.entity.dto.AiPredictDTO;
+import com.medical.entity.vos.FindingKeywordVO;
+import com.medical.entity.vos.HeatmapVO;
 import com.medical.entity.vos.ReportVO;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.ReportService;
@@ -61,7 +63,7 @@ public class ReportServiceImpl implements ReportService {
     private static final int MAX_IMAGE_COUNT = 2;
 
     private final WebClient webClient = WebClient.builder()
-            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024))
             .build();
 
 
@@ -112,48 +114,81 @@ public class ReportServiceImpl implements ReportService {
                     .bodyToMono(AiPredictDTO.class)
                     .timeout(Duration.ofSeconds(120))
                     .block();
+            if (result == null || !"success".equals(result.getStatus())) {
+                log.error("AI推理失败: {}", result != null ? result.getMessage() : "返回为空");
+                throw new ServiceException(ResultCode.AI_SERVICE_TIMEOUT);
+            }
 
-            log.info("AI推理完成，结果：{}", result);
+            log.info("AI推理完成，结果状态: {}", result != null ? result.getStatus() : "null");
 
             // 4. 组装报告（多个路径用逗号分隔存储）
             String imagePaths = savedPaths.stream()
                     .map(Path::toString)
                     .collect(Collectors.joining(","));
+
+            String reportContent = result != null ? result.getReport() : "";
+            String impression = result != null ? result.getImpression() : "";
+            String gate = result != null ? result.getFindingStatus() : "";
+
             String findingsKeywords = "";
             String heatmapData = "";
             Double reportConfidence = null;
 
-            if (result != null) {
-                ObjectMapper mapper = new ObjectMapper();
-                try {
-                    if (result.getFindings() != null) {
-                        findingsKeywords = mapper.writeValueAsString(result.getFindings());
-                    }
-                    if (result.getHeatmaps() != null) {
-                        heatmapData = mapper.writeValueAsString(result.getHeatmaps());
-                    }
-                } catch (Exception ignored) {}
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                List<HeatmapVO> heatmapList = new ArrayList<>();
 
-//                if (result.getConfidence() != null) {
-//                    reportConfidence = result.getConfidence().getReport_confidence();
-//                }
+                // 情况1 findings态：从 findings[].maps[] 提取词级热力图
+                if (result.getFindings() != null && !result.getFindings().isEmpty()) {
+                    List<FindingKeywordVO> keywordsOnly = new ArrayList<>();
+                    for (AiPredictDTO.FindingDTO finding : result.getFindings()) {
+                        keywordsOnly.add(new FindingKeywordVO(
+                                finding.getLabel(), finding.getKeyword(), finding.getConfidence()));
+
+                        if (finding.getMaps() != null) {
+                            for (AiPredictDTO.HeatmapItemDTO fm : finding.getMaps()) {
+                                heatmapList.add(new HeatmapVO(
+                                        fm.getView(), fm.getImage(), finding.getKeyword(), "finding"));
+                            }
+                        }
+                    }
+                    findingsKeywords = mapper.writeValueAsString(keywordsOnly);
+                }
+
+                // 情况3 uncertain态：从顶层 heatmaps[] 提取整体热力图
+                if (result.getHeatmaps() != null && !result.getHeatmaps().isEmpty()) {
+                    for (AiPredictDTO.HeatmapItemDTO hm : result.getHeatmaps()) {
+                        heatmapList.add(new HeatmapVO(
+                                hm.getView(), hm.getImage(), "overall", "overall"));
+                    }
+                }
+
+                if (!heatmapList.isEmpty()) {
+                    heatmapData = mapper.writeValueAsString(heatmapList);
+                    log.info("热力图提取成功，数量: {}, 序列化长度: {}",
+                            heatmapList.size(), heatmapData.length());
+                }
+            } catch (Exception e) {
+                log.error("JSON序列化失败", e);
             }
+
+            reportConfidence = result.getImageContribution();
 
             Report report = new Report();
             report.setDoctorId(doctorId);
             report.setPatientId(patientId);
             report.setImagePath(imagePaths);
-            report.setReportContent(result != null ? result.getReport() : "");
-            report.setAiDraft(result != null ? result.getReport() : "");
-            report.setImpression(result != null ? result.getImpression() : "");
-//            report.setGate(result != null ? result.getGate() : "");
+            report.setReportContent(reportContent);
+            report.setAiDraft(reportContent);
+            report.setImpression(impression);
+            report.setGate(gate);
             report.setReportConfidence(reportConfidence);
             report.setFindingsKeywords(findingsKeywords);
             report.setHeatmapPath(heatmapData);
             report.setStatus(ReportStatusEnum.DRAFT.name());
             report.setCreateBy(doctorId);
             reportMapper.save(report);
-
+            log.info("诊断报告生成成功，ID：{}", report.getId());
             return report;
 
         } catch (IOException e) {
