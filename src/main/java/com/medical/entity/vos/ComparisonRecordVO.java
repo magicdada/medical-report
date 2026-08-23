@@ -21,6 +21,9 @@ public class ComparisonRecordVO {
     /** 患者ID */
     private String patientId;
 
+    /** 患者ID */
+    private String name;
+
     /** AI原始报告 */
     private String aiDraft;
 

@@ -1,10 +1,13 @@
 package com.medical.service.impl;
 
+import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
@@ -14,8 +17,10 @@ import com.itextpdf.layout.property.UnitValue;
 import com.medical.common.ResultCode;
 import com.medical.common.ServiceException;
 import com.medical.common.util.DateUtil;
+import com.medical.entity.dos.Doctor;
 import com.medical.entity.dos.Patient;
 import com.medical.entity.dos.Report;
+import com.medical.mapper.DoctorMapper;
 import com.medical.mapper.PatientMapper;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.ExportService;
@@ -43,64 +48,86 @@ public class ExportServiceImpl implements ExportService {
     @Autowired
     private PatientMapper patientMapper;
 
+    @Autowired
+    private DoctorMapper doctorMapper;
+
     @Override
-    public void exportPdf(String reportId, String doctorId,HttpServletResponse response) {
+    public void exportPdf(String reportId, String doctorId, HttpServletResponse response) {
         Report report = getReportOrThrow(reportId);
         checkOwnership(report, doctorId);
         Patient patient = getPatientOrThrow(report.getPatientId());
+        Doctor doctor = getDoctorOrThrow(doctorId);
 
         ServletOutputStream out = null;
         try {
             response.setContentType("application/pdf");
+            String fileName = patient.getName() + "_" + DateUtil.toString(report.getCreateTime(), "yyyy-MM-dd");
             response.setHeader("Content-Disposition",
-                    "attachment;filename=" + URLEncoder.encode("report_" + reportId, "UTF-8") + ".pdf");
+                    "attachment;filename=" + URLEncoder.encode(fileName, "UTF-8") + ".pdf");
             out = response.getOutputStream();
 
             PdfWriter writer = new PdfWriter(out);
             PdfDocument pdf = new PdfDocument(writer);
             Document document = new Document(pdf, PageSize.A4);
-            document.setMargins(50, 50, 50, 50);
+            document.setMargins(40, 50, 40, 50);
+
+            // 颜色定义
+            Color headerBg = new DeviceRgb(20, 25, 80);
+            Color headerText = ColorConstants.WHITE;
+            Color borderColor = new DeviceRgb(180, 185, 200);
 
             // 标题
-            document.add(new Paragraph("Medical Imaging Diagnostic Report")
-                    .setFontSize(18).setBold()
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(5));
-
-            document.add(new Paragraph("AI-Assisted Chest X-Ray Analysis")
-                    .setFontSize(10).setFontColor(ColorConstants.GRAY)
+            document.add(new Paragraph("Radiology Report")
+                    .setFontSize(22).setBold()
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(20));
 
-            // 患者信息表格
-            Table infoTable = new Table(UnitValue.createPercentArray(new float[]{1, 2, 1, 2}))
-                    .useAllAvailableWidth().setMarginBottom(15);
-            addInfoCell(infoTable, "Patient No.", patient.getPatientNo());
-            addInfoCell(infoTable, "Name", patient.getName());
-            addInfoCell(infoTable, "Gender", patient.getGender());
-            addInfoCell(infoTable, "Age", patient.getAge() != null ? patient.getAge().toString() : "");
-            addInfoCell(infoTable, "Report Date", DateUtil.toString(report.getCreateTime()));
-            addInfoCell(infoTable, "Status", report.getStatus());
-            document.add(infoTable);
+            // 患者信息
+            addSectionHeader(document, "Patient Information", headerBg, headerText);
+            Table patientTable = new Table(UnitValue.createPercentArray(new float[]{1, 1}))
+                    .useAllAvailableWidth()
+                    .setBorder(new SolidBorder(borderColor, 0.5f));
+            addFormRow(patientTable, "Name:", patient.getName(), borderColor);
+            addFormRow(patientTable, "Age:", patient.getAge() != null ? patient.getAge().toString() : "", borderColor);
+            addFormRow(patientTable, "Gender:", patient.getGender(), borderColor);
+            addFormRow(patientTable, "Medical Record Number:", report.getId(), borderColor);
+            document.add(patientTable);
+            document.add(new Paragraph("").setMarginBottom(5));
 
-            // 分割线
-            document.add(new Paragraph("")
-                    .setBorderBottom(new SolidBorder(ColorConstants.LIGHT_GRAY, 1)).setMarginBottom(15));
+            // Technique
+            addSectionHeader(document, "Technique", headerBg, headerText);
+            addSectionContent(document, "PA and Lateral Chest Radiograph", borderColor);
 
             // Findings
-            document.add(new Paragraph("FINDINGS")
-                    .setFontSize(11).setBold().setFontColor(ColorConstants.DARK_GRAY).setMarginBottom(5));
-            document.add(new Paragraph(report.getReportContent() != null ? report.getReportContent() : "No content")
-                    .setFontSize(10).setMarginBottom(15));
+            addSectionHeader(document, "Findings", headerBg, headerText);
+            addSectionContent(document,
+                    report.getReportContent() != null ? report.getReportContent() : "No findings recorded.",
+                    borderColor);
 
-            // Impression
-            document.add(new Paragraph("IMPRESSION")
-                    .setFontSize(11).setBold().setFontColor(ColorConstants.DARK_GRAY).setMarginBottom(5));
-            document.add(new Paragraph("No acute cardiopulmonary abnormality.")
-                    .setFontSize(10).setMarginBottom(20));
+            // Impressions
+            addSectionHeader(document, "Impressions", headerBg, headerText);
+            addSectionContent(document,
+                    report.getImpression() != null ? report.getImpression() : "No impression recorded.",
+                    borderColor);
+
+            // Recommendations
+            addSectionHeader(document, "Recommendations", headerBg, headerText);
+            addSectionContent(document, " ", borderColor);
+
+            document.add(new Paragraph("").setMarginBottom(5));
+
+            // 签名区
+            Table signTable = new Table(UnitValue.createPercentArray(new float[]{1, 1}))
+                    .useAllAvailableWidth()
+                    .setBorder(new SolidBorder(borderColor, 0.5f));
+            addFormRow(signTable, "Radiologist's Name:", doctor.getRealName(), borderColor);
+            addFormRow(signTable, "Date:", DateUtil.toString(report.getCreateTime()), borderColor);
+            addFormRow(signTable, "Signature:", "",borderColor);
+            document.add(signTable);
 
             // 底部声明
             document.add(new Paragraph("")
-                    .setBorderBottom(new SolidBorder(ColorConstants.LIGHT_GRAY, 1)).setMarginBottom(10));
-            document.add(new Paragraph("This report was generated with AI assistance (R2GenGPT). Please review and confirm before clinical use.")
+                    .setBorderBottom(new SolidBorder(ColorConstants.LIGHT_GRAY, 1)).setMarginTop(15).setMarginBottom(8));
+            document.add(new Paragraph("This report was generated with AI assistance. Please review and confirm before clinical use.")
                     .setFontSize(8).setFontColor(ColorConstants.GRAY).setTextAlignment(TextAlignment.CENTER));
 
             document.close();
@@ -115,16 +142,18 @@ public class ExportServiceImpl implements ExportService {
     }
 
     @Override
-    public void exportWord(String reportId,String doctorId, HttpServletResponse response) {
+    public void exportWord(String reportId, String doctorId, HttpServletResponse response) {
         Report report = getReportOrThrow(reportId);
         checkOwnership(report, doctorId);
         Patient patient = getPatientOrThrow(report.getPatientId());
+        Doctor doctor = getDoctorOrThrow(doctorId);
 
         ServletOutputStream out = null;
         try {
             response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document;charset=utf-8");
+            String fileName = patient.getName() + "_" + DateUtil.toString(report.getCreateTime(), "yyyy-MM-dd");
             response.setHeader("Content-Disposition",
-                    "attachment;filename=" + URLEncoder.encode("report_" + reportId, "UTF-8") + ".docx");
+                    "attachment;filename=" + URLEncoder.encode(fileName, "UTF-8") + ".docx");
             out = response.getOutputStream();
 
             XWPFDocument document = new XWPFDocument();
@@ -132,56 +161,64 @@ public class ExportServiceImpl implements ExportService {
             // 标题
             XWPFParagraph title = document.createParagraph();
             title.setAlignment(ParagraphAlignment.CENTER);
+            title.setSpacingAfter(400);
             XWPFRun titleRun = title.createRun();
-            titleRun.setText("Medical Imaging Diagnostic Report");
+            titleRun.setText("Radiology Report");
             titleRun.setBold(true);
-            titleRun.setFontSize(18);
+            titleRun.setFontSize(22);
 
-            // 副标题
-            XWPFParagraph subtitle = document.createParagraph();
-            subtitle.setAlignment(ParagraphAlignment.CENTER);
-            XWPFRun subtitleRun = subtitle.createRun();
-            subtitleRun.setText("AI-Assisted Chest X-Ray Analysis");
-            subtitleRun.setFontSize(10);
-            subtitleRun.setColor("888888");
-
-            document.createParagraph();
-
-            // 患者信息表格
-            XWPFTable infoTable = document.createTable(3, 4);
-            infoTable.setWidth("100%");
-            setTableCell(infoTable, 0, 0, "Patient No.");
-            setTableCell(infoTable, 0, 1, patient.getPatientNo());
-            setTableCell(infoTable, 0, 2, "Name");
-            setTableCell(infoTable, 0, 3, patient.getName());
-            setTableCell(infoTable, 1, 0, "Gender");
-            setTableCell(infoTable, 1, 1, patient.getGender());
-            setTableCell(infoTable, 1, 2, "Age");
-            setTableCell(infoTable, 1, 3, patient.getAge() != null ? patient.getAge().toString() : "");
-            setTableCell(infoTable, 2, 0, "Report Date");
-            setTableCell(infoTable, 2, 1, DateUtil.toString(report.getCreateTime()));
-            setTableCell(infoTable, 2, 2, "Status");
-            setTableCell(infoTable, 2, 3, report.getStatus());
+            // 患者信息
+            addWordSectionHeader(document, "Patient Information");
+            XWPFTable patientTable = document.createTable(4, 2);
+            patientTable.setWidth("100%");
+            setTableCell(patientTable, 0, 0, "Name:");
+            setTableCell(patientTable, 0, 1, patient.getName());
+            setTableCell(patientTable, 1, 0, "Age:");
+            setTableCell(patientTable, 1, 1, patient.getAge() != null ? patient.getAge().toString() : "");
+            setTableCell(patientTable, 2, 0, "Gender:");
+            setTableCell(patientTable, 2, 1, patient.getGender());
+            setTableCell(patientTable, 3, 0, "Medical Record Number:");
+            setTableCell(patientTable, 3, 1, report.getId());
 
             document.createParagraph();
+
+            // Technique
+            addWordSectionHeader(document, "Technique");
+            addWordSectionContent(document, "PA and Lateral Chest Radiograph");
 
             // Findings
-            addWordSection(document, "FINDINGS",
-                    report.getReportContent() != null ? report.getReportContent() : "No content");
+            addWordSectionHeader(document, "Findings");
+            addWordSectionContent(document,
+                    report.getReportContent() != null ? report.getReportContent() : "No findings recorded.");
+
+            // Impressions
+            addWordSectionHeader(document, "Impressions");
+            addWordSectionContent(document,
+                    report.getImpression() != null ? report.getImpression() : "No impression recorded.");
+
+            // Recommendations
+            addWordSectionHeader(document, "Recommendations");
+            addWordSectionContent(document, " ");
 
             document.createParagraph();
 
-            // Impression
-            addWordSection(document, "IMPRESSION",
-                    "No acute cardiopulmonary abnormality.");
+            // 签名区
+            XWPFTable signTable = document.createTable(2, 2);
+            signTable.setWidth("100%");
+            setTableCell(signTable, 0, 0, "Radiologist's Name:");
+            setTableCell(signTable, 0, 1, doctor.getRealName());
+            setTableCell(signTable, 1, 0, "Date:");
+            setTableCell(signTable, 1, 1, DateUtil.toString(report.getCreateTime()));
+            setTableCell(signTable, 2, 0, "Signature:");
+            setTableCell(signTable, 2, 1, "");
 
             document.createParagraph();
 
-            // 声明
+            // 底部声明
             XWPFParagraph disclaimer = document.createParagraph();
             disclaimer.setAlignment(ParagraphAlignment.CENTER);
             XWPFRun disclaimerRun = disclaimer.createRun();
-            disclaimerRun.setText("This report was generated with AI assistance (R2GenGPT). Please review and confirm before clinical use.");
+            disclaimerRun.setText("This report was generated with AI assistance. Please review and confirm before clinical use.");
             disclaimerRun.setFontSize(8);
             disclaimerRun.setColor("888888");
 
@@ -213,27 +250,73 @@ public class ExportServiceImpl implements ExportService {
         return patient;
     }
 
-    private void addInfoCell(Table table, String label, String value) {
-        table.addCell(new Cell().add(new Paragraph(label).setFontSize(9).setBold())
-                .setBackgroundColor(ColorConstants.LIGHT_GRAY));
-        table.addCell(new Cell().add(new Paragraph(value != null ? value : "").setFontSize(9)));
+    private Doctor getDoctorOrThrow(String doctorId) {
+        Doctor doctor = doctorMapper.findById(doctorId).orElse(null);
+        if (doctor == null) {
+            throw new ServiceException(ResultCode.USER_NOT_EXIST);
+        }
+        return doctor;
+    }
+
+    private void addSectionHeader(Document document, String title, Color bgColor, Color textColor) {
+        Table table = new Table(1).useAllAvailableWidth();
+        Cell cell = new Cell().add(new Paragraph(title).setFontSize(11).setBold().setFontColor(textColor))
+                .setBackgroundColor(bgColor)
+                .setPadding(6)
+                .setBorder(Border.NO_BORDER);
+        table.addCell(cell);
+        document.add(table);
+    }
+
+    private void addSectionContent(Document document, String content, Color borderColor) {
+        Table table = new Table(1).useAllAvailableWidth()
+                .setBorder(new SolidBorder(borderColor, 0.5f));
+        Cell cell = new Cell().add(new Paragraph(content).setFontSize(10))
+                .setPadding(8)
+                .setMinHeight(25)
+                .setBorder(new SolidBorder(borderColor, 0.5f));
+        table.addCell(cell);
+        document.add(table);
+        document.add(new Paragraph("").setMarginBottom(4));
+    }
+
+    private void addFormRow(Table table, String label, String value, Color borderColor) {
+        Cell labelCell = new Cell().add(new Paragraph(label).setFontSize(10).setBold())
+                .setPadding(6)
+                .setBorder(new SolidBorder(borderColor, 0.5f));
+        Cell valueCell = new Cell().add(new Paragraph(value != null ? value : "").setFontSize(10))
+                .setPadding(6)
+                .setBorder(new SolidBorder(borderColor, 0.5f));
+        table.addCell(labelCell);
+        table.addCell(valueCell);
     }
 
     private void setTableCell(XWPFTable table, int row, int col, String text) {
         table.getRow(row).getCell(col).setText(text != null ? text : "");
     }
 
-    private void addWordSection(XWPFDocument document, String title, String content) {
-        XWPFParagraph titleParagraph = document.createParagraph();
-        XWPFRun titleRun = titleParagraph.createRun();
-        titleRun.setText(title);
-        titleRun.setBold(true);
-        titleRun.setFontSize(11);
+    private void addWordSectionHeader(XWPFDocument document, String title) {
+        XWPFTable table = document.createTable(1, 1);
+        table.setWidth("100%");
+        XWPFTableCell cell = table.getRow(0).getCell(0);
+        cell.setColor("141950");
+        XWPFParagraph p = cell.getParagraphs().get(0);
+        XWPFRun run = p.createRun();
+        run.setText(title);
+        run.setBold(true);
+        run.setFontSize(11);
+        run.setColor("FFFFFF");
+    }
 
-        XWPFParagraph contentParagraph = document.createParagraph();
-        XWPFRun contentRun = contentParagraph.createRun();
-        contentRun.setText(content);
-        contentRun.setFontSize(10);
+    private void addWordSectionContent(XWPFDocument document, String content) {
+        XWPFTable table = document.createTable(1, 1);
+        table.setWidth("100%");
+        XWPFTableCell cell = table.getRow(0).getCell(0);
+        XWPFParagraph p = cell.getParagraphs().get(0);
+        XWPFRun run = p.createRun();
+        run.setText(content);
+        run.setFontSize(10);
+        document.createParagraph();
     }
 
     /**
