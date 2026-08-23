@@ -2,6 +2,7 @@ package com.medical.service.impl;
 
 import com.medical.common.enums.DiseaseEnum;
 import com.medical.common.util.DateUtil;
+import com.medical.entity.dos.Patient;
 import com.medical.entity.dos.Report;
 import com.medical.entity.dto.ComparisonStatsDTO;
 import com.medical.entity.dto.ReportOverviewDTO;
@@ -176,8 +177,12 @@ public class StatsServiceImpl implements StatsService {
 
     private ComparisonRecordVO toComparisonRecordVO(Report report) {
         ComparisonRecordVO vo = new ComparisonRecordVO();
+        Patient patient = patientMapper.findById(report.getPatientId()).orElse(null);
         vo.setId(report.getId());
         vo.setPatientId(report.getPatientId());
+        if (patient != null){
+            vo.setName(patient.getName());
+        }
         vo.setAiDraft(report.getAiDraft());
         vo.setDoctorFinal(report.getReportContent());
         vo.setCreateTime(report.getCreateTime());
