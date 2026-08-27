@@ -26,6 +26,7 @@ import com.medical.mapper.ReportMapper;
 import com.medical.service.ExportService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.*;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import javax.servlet.ServletOutputStream;
@@ -203,7 +204,7 @@ public class ExportServiceImpl implements ExportService {
             document.createParagraph();
 
             // 签名区
-            XWPFTable signTable = document.createTable(2, 2);
+            XWPFTable signTable = document.createTable(3, 2);
             signTable.setWidth("100%");
             setTableCell(signTable, 0, 0, "Radiologist's Name:");
             setTableCell(signTable, 0, 1, doctor.getRealName());
@@ -296,11 +297,14 @@ public class ExportServiceImpl implements ExportService {
     }
 
     private void addWordSectionHeader(XWPFDocument document, String title) {
-        XWPFTable table = document.createTable(1, 1);
-        table.setWidth("100%");
-        XWPFTableCell cell = table.getRow(0).getCell(0);
-        cell.setColor("141950");
-        XWPFParagraph p = cell.getParagraphs().get(0);
+        XWPFParagraph p = document.createParagraph();
+        p.setSpacingBefore(100);
+        p.setSpacingAfter(0);
+
+        CTShd shd = p.getCTP().addNewPPr().addNewShd();
+        shd.setVal(STShd.CLEAR);
+        shd.setFill("141950");
+
         XWPFRun run = p.createRun();
         run.setText(title);
         run.setBold(true);

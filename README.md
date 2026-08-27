@@ -2,7 +2,7 @@
 
 ## 项目简介
 
-本系统是一个基于深度学习的胸部X光医学影像报告自动生成系统。医生上传胸部X光影像后，系统自动调用AI模型（R2GenGPT: Swin Transformer + LLaMA-2-7B）生成放射科诊断报告，并支持报告的查看、编辑、确认签发、历史记录管理、AI置信度可视化、AI与医生报告对比分析、数据统计大屏以及多格式导出等功能。
+本系统是一个基于深度学习的胸部X光医学影像报告自动生成系统。医生上传胸部X光影像后，系统自动调用AI模型（R2GenGPT: Swin Transformer + LLaMA-2-7B）生成放射科诊断报告，并支持报告的查看、编辑、确认签发、历史记录管理、AI置信度可视化、注意力热力图展示、三态门控分类（normal/findings/uncertain）、AI与医生报告对比分析、数据统计大屏以及专业格式的PDF/Word导出等功能。
 
 ## 技术栈
 
@@ -17,8 +17,8 @@
 | Lombok | 1.18.34 | 简化代码 |
 | Gson | - | JSON序列化（AuthUser存入JWT Claims） |
 | WebFlux WebClient | - | HTTP调用Python AI推理服务（带超时控制） |
-| iText | 7.1.2 | PDF报告生成 |
-| Apache POI | 5.2.5 | Word文档生成 |
+| iText | 7.1.2 | PDF报告生成（专业放射科报告模板） |
+| Apache POI | 5.2.5 | Word文档生成（专业放射科报告模板） |
 | Logback | - | 日志框架 |
 
 ## 系统架构
@@ -36,9 +36,10 @@ Java Spring Boot后端 (localhost:8887)
     └── WebClient → 调用Python AI推理服务（60秒超时）
     ↕ HTTP Multipart请求（发送影像文件，接收报告JSON）
 Python FastAPI推理服务 (台式机 192.168.1.81:8000)
-    └── R2GenGPT模型（Delta Alignment, Epoch 14）
-        ├── Swin Transformer（视觉编码器 + LoRA微调）
-        ├── Linear Projection（视觉-语言映射层）
+    └── R2GenGPT模型
+        ├── Swin Transformer（视觉编码器）
+        ├── MultiGranularityFusion（多粒度视觉特征融合：Stage 2/3/4）
+        ├── EnhancedProjection（增强映射模块：2层MLP + GELU）
         └── LLaMA-2-7B-Chat（4-bit量化，报告生成）
 ```
 
@@ -78,7 +79,7 @@ com.medical
 ├── controller/
 │   ├── AuthController.java                   -- 认证接口（登录/注册/刷新token/获取信息/退出/修改信息/修改密码）
 │   ├── PatientController.java                -- 患者管理接口（新增/查询/搜索/列表）
-│   ├── ReportController.java                 -- 诊断报告接口（生成/查询/状态更新，含权限校验）
+│   ├── ReportController.java                 -- 诊断报告接口（生成/查询/状态更新/内容编辑，含权限校验）
 │   ├── StatsController.java                  -- 统计接口（总览/月度/疾病分布/效率/AI对比）
 │   └── ExportController.java                 -- 报告导出接口（PDF/Word，通过HttpServletResponse流输出）
 ├── service/
@@ -92,7 +93,7 @@ com.medical
 │       ├── PatientServiceImpl.java           -- 患者业务实现
 │       ├── ReportServiceImpl.java            -- 报告业务实现（文件校验/WebClient调用AI/权限校验）
 │       ├── StatsServiceImpl.java             -- 统计业务实现（数据库聚合查询，非内存全量计算）
-│       └── ExportServiceImpl.java            -- 导出业务实现（iText生成PDF/POI生成Word）
+│       └── ExportServiceImpl.java            -- 导出业务实现（iText生成PDF/POI生成Word，专业放射科报告模板）
 ├── mapper/
 │   ├── DoctorMapper.java                     -- 医生数据访问层
 │   ├── DoctorTokenMapper.java                -- 医生Token数据访问层
@@ -103,7 +104,7 @@ com.medical
     │   ├── Doctor.java                       -- 医生实体（密码字段@JsonProperty WRITE_ONLY）
     │   ├── DoctorToken.java                  -- 医生Token实体
     │   ├── Patient.java                      -- 患者实体
-    │   └── Report.java                       -- 诊断报告实体（含aiDraft字段保存AI原始报告）
+    │   └── Report.java                       -- 诊断报告实体（含aiDraft/impression/gate/confidence等字段）
     ├── dto/
     │   └── DoctorUpdateDTO.java              -- 医生信息更新DTO（含@Email校验）
     └── vos/
@@ -111,7 +112,7 @@ com.medical
         ├── MonthlyVolumeVO.java              -- 月度报告量VO
         ├── DiseaseDistributionVO.java        -- 疾病分布VO
         ├── ComparisonStatsVO.java            -- AI对比统计VO
-        ├── ComparisonRecordVO.java           -- AI对比记录VO
+        ├── ComparisonRecordVO.java           -- AI对比记录VO（含patientName）
         └── EfficiencyVO.java                 -- AI效率统计VO
 ```
 
@@ -169,7 +170,11 @@ com.medical
 | image_path | varchar(255) | 影像文件路径 |
 | report_content | text | 医生确认后的报告内容 |
 | ai_draft | text | AI原始生成的报告内容（用于AI vs 医生对比分析） |
-| heatmap_path | varchar(255) | GradCAM热力图路径 |
+| impression | text | AI生成的印象/结论 |
+| gate | varchar(20) | 三态门控：normal-正常 findings-有发现 uncertain-不确定 |
+| report_confidence | double | 报告置信度 |
+| findings_keywords | text | 发现关键词JSON |
+| heatmap_path | longtext | 热力图base64 JSON数据 |
 | pdf_path | varchar(255) | PDF报告路径 |
 | status | varchar(20) | 报告状态：DRAFT/CONFIRMED/SIGNED（使用ReportStatusEnum） |
 | create_by~delete_flag | - | 同BaseEntity |
@@ -204,6 +209,7 @@ Token刷新:
 ### 权限控制
 
 - 报告状态更新：Service层校验 `report.getDoctorId().equals(doctorId)`，防止越权修改
+- 报告内容编辑：Service层校验报告归属权，防止未授权修改
 - 报告导出：Service层校验报告归属权，防止未授权下载
 - 敏感信息保护：Doctor.password 字段使用 `@JsonProperty(access = WRITE_ONLY)` 阻止序列化输出
 
@@ -241,11 +247,12 @@ Token刷新:
 
 | 方法 | 路径 | 说明 | 参数 |
 |------|------|------|------|
-| POST | /generate | 生成报告（调用AI推理服务） | @RequestParam: patientId, file |
-| GET | /get/{id} | 获取报告 | @PathVariable: id |
+| POST | /generate | 生成报告（调用AI推理服务） | @RequestParam: patientId, files |
+| GET | /getDetail/{id} | 获取报告详情 | @PathVariable: id |
 | GET | /list/patient/{patientId} | 患者历史报告 | @PathVariable: patientId |
 | GET | /list/mine | 当前医生的报告 | 无（从UserContext获取doctorId） |
 | PUT | /status/{id} | 更新状态（含权限校验） | @PathVariable: id, @RequestParam: status |
+| PUT | /content/{id} | 更新报告内容（含权限校验） | @PathVariable: id, @RequestParam: reportContent |
 
 ### 统计接口（/api/stats）- 需要Token
 
@@ -255,15 +262,27 @@ Token刷新:
 | GET | /monthly | 月度报告量 | 数据库GROUP BY + DATE_FORMAT |
 | GET | /disease | 疾病分布 | 报告内容关键词匹配（DiseaseEnum） |
 | GET | /comparison | AI对比统计 | aiDraft vs reportContent比对 |
-| GET | /comparison/records | AI对比记录列表 | 查询被修改的报告 |
+| GET | /comparison/records | AI对比记录列表 | 查询被修改的报告（含patientName） |
 | GET | /efficiency | AI效率统计 | 数据库AVG + TIMESTAMPDIFF |
 
 ### 导出接口（/api/export）- 需要Token
 
 | 方法 | 路径 | 说明 | 输出 |
 |------|------|------|------|
-| GET | /pdf/{reportId} | 导出PDF（含权限校验） | application/pdf 文件流 |
-| GET | /word/{reportId} | 导出Word（含权限校验） | application/docx 文件流 |
+| GET | /pdf/{reportId} | 导出PDF（含权限校验） | application/pdf 文件流（文件名：患者姓名_日期.pdf） |
+| GET | /word/{reportId} | 导出Word（含权限校验） | application/docx 文件流（文件名：患者姓名_日期.docx） |
+
+### 导出报告模板
+
+PDF和Word导出均采用统一的专业放射科报告模板，包含以下区块：
+
+- **Patient Information** — 患者姓名、年龄、性别、病历号
+- **Technique** — 检查技术（PA and Lateral Chest Radiograph）
+- **Findings** — AI生成的影像发现
+- **Impressions** — AI生成的印象/结论
+- **Recommendations** — 建议（预留空白）
+- **Signature** — 放射科医生签名区（姓名、日期、手写签名）
+- **Disclaimer** — AI辅助生成声明
 
 ## 异常处理
 
@@ -354,7 +373,7 @@ Token刷新:
 
 ## 启动方式
 
-1. 确保MySQL服务已启动，执行建表SQL创建 `medical_report` 数据库及相关表
+1. 确保MySQL服务已启动，执行 `medical-report.sql` 创建 `medical_report` 数据库及相关表
 2. 修改 `application.yml` 中的数据库连接信息和AI服务地址
 3. 在IDEA中运行 `ReportSystemApplication.main()` 启动服务
 4. 服务启动后访问 `http://localhost:8887`
