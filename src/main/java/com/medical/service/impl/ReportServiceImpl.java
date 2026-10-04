@@ -169,7 +169,7 @@ public class ReportServiceImpl implements ReportService {
                             heatmapList.size(), heatmapData.length());
                 }
             } catch (Exception e) {
-                log.error("JSON序列化失败", e);
+                log.error("JSON序列化失败:", e);
             }
 
             reportConfidence = result.getImageContribution();
@@ -192,10 +192,10 @@ public class ReportServiceImpl implements ReportService {
             return report;
 
         } catch (IOException e) {
-            log.error("文件处理失败", e);
+            log.error("文件处理失败:", e);
             throw new ServiceException(ResultCode.REPORT_GENERATE_ERROR);
         } catch (Exception e) {
-            log.error("AI推理服务异常", e);
+            log.error("AI推理服务异常:", e);
             throw new ServiceException(ResultCode.AI_SERVICE_ERROR);
         }
     }
@@ -285,6 +285,16 @@ public class ReportServiceImpl implements ReportService {
         report.setStatus(status);
         reportMapper.save(report);
         log.info("报告状态更新：{} -> {}", id, status);
+        return report;
+    }
+
+    @Override
+    public Report validateOwnership(String reportId, String doctorId) {
+        Report report = reportMapper.findById(reportId)
+                .orElseThrow(() -> new ServiceException(ResultCode.REPORT_NOT_EXIST));
+        if (!report.getDoctorId().equals(doctorId)) {
+            throw new ServiceException(ResultCode.REPORT_NOT_OWN);
+        }
         return report;
     }
 }

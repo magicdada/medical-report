@@ -1,5 +1,6 @@
 package com.medical.service.impl;
 
+import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceRgb;
@@ -10,27 +11,34 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.property.TextAlignment;
 import com.itextpdf.layout.property.UnitValue;
 import com.medical.common.ResultCode;
 import com.medical.common.ServiceException;
+import com.medical.common.properties.PatientChatProperties;
 import com.medical.common.util.DateUtil;
+import com.medical.common.util.QrCodeUtil;
 import com.medical.entity.dos.Doctor;
 import com.medical.entity.dos.Patient;
+import com.medical.entity.dos.PatientChat;
 import com.medical.entity.dos.Report;
 import com.medical.mapper.DoctorMapper;
 import com.medical.mapper.PatientMapper;
 import com.medical.mapper.ReportMapper;
 import com.medical.service.ExportService;
+import com.medical.service.PatientChatService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.net.URLEncoder;
 
 /**
@@ -52,12 +60,23 @@ public class ExportServiceImpl implements ExportService {
     @Autowired
     private DoctorMapper doctorMapper;
 
+    @Autowired
+    private PatientChatService patientChatService;
+
+    @Autowired
+    private PatientChatProperties patientChatProperties;
+
     @Override
     public void exportPdf(String reportId, String doctorId, HttpServletResponse response) {
         Report report = getReportOrThrow(reportId);
         checkOwnership(report, doctorId);
         Patient patient = getPatientOrThrow(report.getPatientId());
         Doctor doctor = getDoctorOrThrow(doctorId);
+
+        // 生成患者扫码访问码 + QR码图片
+        PatientChat patientChat = patientChatService.createAccessCode(reportId, doctorId);
+        String accessUrl = patientChatService.buildAccessUrl(patientChat.getAccessCode());
+        byte[] qrCodeBytes = QrCodeUtil.generatePng(accessUrl, patientChatProperties.getQrcodeSize());
 
         ServletOutputStream out = null;
         try {
@@ -122,7 +141,8 @@ public class ExportServiceImpl implements ExportService {
                     .setBorder(new SolidBorder(borderColor, 0.5f));
             addFormRow(signTable, "Radiologist's Name:", doctor.getRealName(), borderColor);
             addFormRow(signTable, "Date:", DateUtil.toString(report.getCreateTime()), borderColor);
-            addFormRow(signTable, "Signature:", "",borderColor);
+            addFormRow(signTable, "Signature:", "", borderColor);
+            addQrCodeRow(signTable, "Scan for AI chat:", qrCodeBytes, borderColor);
             document.add(signTable);
 
             // 底部声明
@@ -132,10 +152,10 @@ public class ExportServiceImpl implements ExportService {
                     .setFontSize(8).setFontColor(ColorConstants.GRAY).setTextAlignment(TextAlignment.CENTER));
 
             document.close();
-            log.info("PDF导出成功，报告ID：{}", reportId);
+            log.info("PDF导出成功,报告ID:{},访问码:{}", reportId, patientChat.getAccessCode());
 
         } catch (Exception e) {
-            log.error("PDF导出失败", e);
+            log.error("PDF导出失败:", e);
             throw new ServiceException(ResultCode.REPORT_GENERATE_ERROR, "PDF导出失败");
         } finally {
             closeStream(out);
@@ -148,6 +168,11 @@ public class ExportServiceImpl implements ExportService {
         checkOwnership(report, doctorId);
         Patient patient = getPatientOrThrow(report.getPatientId());
         Doctor doctor = getDoctorOrThrow(doctorId);
+
+        // 生成患者扫码访问码 + QR码图片
+        PatientChat patientChat = patientChatService.createAccessCode(reportId, doctorId);
+        String accessUrl = patientChatService.buildAccessUrl(patientChat.getAccessCode());
+        byte[] qrCodeBytes = QrCodeUtil.generatePng(accessUrl, patientChatProperties.getQrcodeSize());
 
         ServletOutputStream out = null;
         try {
@@ -204,7 +229,7 @@ public class ExportServiceImpl implements ExportService {
             document.createParagraph();
 
             // 签名区
-            XWPFTable signTable = document.createTable(3, 2);
+            XWPFTable signTable = document.createTable(4, 2);
             signTable.setWidth("100%");
             setTableCell(signTable, 0, 0, "Radiologist's Name:");
             setTableCell(signTable, 0, 1, doctor.getRealName());
@@ -212,6 +237,8 @@ public class ExportServiceImpl implements ExportService {
             setTableCell(signTable, 1, 1, DateUtil.toString(report.getCreateTime()));
             setTableCell(signTable, 2, 0, "Signature:");
             setTableCell(signTable, 2, 1, "");
+            setTableCell(signTable, 3, 0, "Scan for AI chat:");
+            addWordQrCodeCell(signTable, 3, 1, qrCodeBytes);
 
             document.createParagraph();
 
@@ -225,10 +252,10 @@ public class ExportServiceImpl implements ExportService {
 
             document.write(out);
             document.close();
-            log.info("Word导出成功，报告ID：{}", reportId);
+            log.info("Word导出成功,报告ID:{},访问码:{}", reportId, patientChat.getAccessCode());
 
         } catch (Exception e) {
-            log.error("Word导出失败", e);
+            log.error("Word导出失败:", e);
             throw new ServiceException(ResultCode.REPORT_GENERATE_ERROR, "Word导出失败");
         } finally {
             closeStream(out);
@@ -292,8 +319,48 @@ public class ExportServiceImpl implements ExportService {
         table.addCell(valueCell);
     }
 
+    /**
+     * 添加带QR码的签名表格行(PDF)
+     */
+    private void addQrCodeRow(Table table, String label, byte[] qrCodeBytes, Color borderColor) {
+        Cell labelCell = new Cell().add(new Paragraph(label).setFontSize(10).setBold())
+                .setPadding(6)
+                .setBorder(new SolidBorder(borderColor, 0.5f))
+                .setVerticalAlignment(com.itextpdf.layout.property.VerticalAlignment.MIDDLE);
+
+        Image qrImage = new Image(ImageDataFactory.create(qrCodeBytes))
+                .setWidth(80)
+                .setHeight(80);
+        Cell qrCell = new Cell().add(qrImage)
+                .setPadding(6)
+                .setBorder(new SolidBorder(borderColor, 0.5f))
+                .setTextAlignment(TextAlignment.CENTER);
+
+        table.addCell(labelCell);
+        table.addCell(qrCell);
+    }
+
     private void setTableCell(XWPFTable table, int row, int col, String text) {
         table.getRow(row).getCell(col).setText(text != null ? text : "");
+    }
+
+    /**
+     * 向Word表格单元格嵌入QR码图片
+     */
+    private void addWordQrCodeCell(XWPFTable table, int row, int col, byte[] qrCodeBytes) {
+        XWPFTableCell cell = table.getRow(row).getCell(col);
+        // 清空默认段落的文字
+        cell.removeParagraph(0);
+        XWPFParagraph p = cell.addParagraph();
+        p.setAlignment(ParagraphAlignment.CENTER);
+        XWPFRun run = p.createRun();
+        try (ByteArrayInputStream qrStream = new ByteArrayInputStream(qrCodeBytes)) {
+            run.addPicture(qrStream, XWPFDocument.PICTURE_TYPE_PNG, "qrcode.png",
+                    Units.toEMU(80), Units.toEMU(80));
+        } catch (Exception e) {
+            log.error("Word中嵌入QR码失败:", e);
+            run.setText("[QR 码生成失败]");
+        }
     }
 
     private void addWordSectionHeader(XWPFDocument document, String title) {
@@ -338,7 +405,7 @@ public class ExportServiceImpl implements ExportService {
                 out.flush();
                 out.close();
             } catch (Exception e) {
-                log.error("输出流关闭失败", e);
+                log.error("输出流关闭失败:", e);
             }
         }
     }

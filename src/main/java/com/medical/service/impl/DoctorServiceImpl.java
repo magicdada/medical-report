@@ -93,6 +93,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Doctor updateInfo(String id, DoctorUpdateDTO dto) {
         Doctor doctor = doctorMapper.findById(id).orElse(null);
         if (doctor == null) {

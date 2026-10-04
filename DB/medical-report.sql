@@ -74,3 +74,36 @@ CREATE TABLE `report` (
   INDEX `idx_doctor_id`(`doctor_id` ASC) USING BTREE,
   INDEX `idx_patient_id`(`patient_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '诊断报告表' ROW_FORMAT = DYNAMIC;
+
+DROP TABLE IF EXISTS `chat_message`;
+CREATE TABLE `chat_message` (
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+  `create_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime(6) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime(6) NULL DEFAULT NULL COMMENT '更新时间',
+  `delete_flag` bit(1) NULL DEFAULT b'0' COMMENT '删除标志 true/false 删除/未删除',
+  `report_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '关联报告ID',
+  `session_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '会话类型：doctor_chat-医生对话 patient_chat-患者对话',
+  `role` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息角色：user-用户提问 assistant-AI回复',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息内容',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_report_session`(`report_id` ASC, `session_type` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '对话消息表' ROW_FORMAT = DYNAMIC;
+
+DROP TABLE IF EXISTS `patient_chat`;
+CREATE TABLE `patient_chat` (
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+  `create_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime(6) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime(6) NULL DEFAULT NULL COMMENT '更新时间',
+  `delete_flag` bit(1) NULL DEFAULT b'0' COMMENT '删除标志 true/false 删除/未删除',
+  `report_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '关联报告ID',
+  `access_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '访问码(扫码/链接的凭证)',
+  `expire_time` datetime NOT NULL COMMENT '过期时间',
+  `revoked` bit(1) NULL DEFAULT b'0' COMMENT '是否已撤销',
+PRIMARY KEY (`id`) USING BTREE,
+UNIQUE INDEX `uk_access_code`(`access_code` ASC) USING BTREE,
+INDEX `idx_report_id`(`report_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '患者扫码对话凭证表' ROW_FORMAT = DYNAMIC;

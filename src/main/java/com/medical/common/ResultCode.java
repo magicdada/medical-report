@@ -39,7 +39,19 @@ public enum ResultCode {
     FILE_COUNT_EXCEED(50007, "最多支持上传2张影像文件（正位+侧位）"),
 
     AI_SERVICE_ERROR(60001, "AI推理服务异常，请稍后重试"),
-    AI_SERVICE_TIMEOUT(60002, "AI推理服务超时");
+    AI_SERVICE_TIMEOUT(60002, "AI推理服务超时"),
+
+    LLM_SERVICE_ERROR(60003, "大模型服务异常，请稍后重试"),
+
+    LLM_SERVICE_TIMEOUT(60004, "大模型服务超时"),
+
+    LLM_RESPONSE_EMPTY(60005, "大模型返回内容为空"),
+
+    LLM_RESPONSE_INVALID(60006, "大模型返回格式异常"),
+
+    PATIENT_CHAT_INVALID(70001, "访问链接无效"),
+    PATIENT_CHAT_EXPIRED(70002, "访问链接已过期"),
+    PATIENT_CHAT_REVOKED(70003, "访问链接已失效,请联系医生重新获取");
 
     private final Integer code;
     private final String message;

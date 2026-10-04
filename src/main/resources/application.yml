@@ -30,6 +30,8 @@ ignored:
     - /api/auth/login
     - /api/auth/register
     - /api/auth/refresh/**
+    - /api/patient-chat/**
+    - /api/llm-diag/**
     - /uploads/**
     - /druid/**
     - /v3/api-docs
@@ -58,6 +60,22 @@ ai:
     url: http://192.168.1.81:8000
   baseline:
     avg-report-time: 10
+
+# 阿里千问大模型配置
+llm:
+  dash-scope:
+    base-url: https://dashscope.aliyuncs.com
+    api-key: sk-ws-H.PRHXIPM.6ZLc.MEUCIGenoSIhlCGOEHsKTOJMkDLmUU2VOLjJcXpcwmK4uas1AiEA-5_KDnklRLDvq5Twyf7LeyxPjXfJkpALcGvom97Vg-g
+    model: qwen-turbo
+    timeout-seconds: 60
+    temperature: 0.7
+    max-tokens: 1500
+
+# 患者端AI助手对话配置
+patient-chat:
+  frontend-base-url: http://192.168.1.81:3000
+  expire-days: 30
+  qrcode-size: 180
 
 # 文件上传配置
 file:

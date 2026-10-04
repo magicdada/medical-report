@@ -18,5 +18,6 @@ import java.util.List;
 @ConfigurationProperties(prefix = "ignored")
 public class IgnoredUrlsProperties {
 
+    /** 忽略鉴权的url配置 */
     private List<String> urls = new ArrayList<>();
 }

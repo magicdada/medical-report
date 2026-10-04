@@ -51,7 +51,7 @@ public class ReportController {
      * @return 报告信息
      */
     @GetMapping("/getDetail/{id}")
-    public ResultMessage<ReportVO> getDetail(@PathVariable String id) {
+    public ResultMessage<ReportVO> getDetail(@NotBlank(message = "报告ID不能为空") @PathVariable String id) {
         return ResultUtil.data(reportService.getDetail(id));
     }
 
@@ -62,7 +62,7 @@ public class ReportController {
      * @return 报告列表
      */
     @GetMapping("/list/patient/{patientId}")
-    public ResultMessage<List<ReportVO>> getByPatient(@PathVariable String patientId) {
+    public ResultMessage<List<ReportVO>> getByPatient(@NotBlank(message = "患者ID不能为空") @PathVariable String patientId) {
         return ResultUtil.data(reportService.getByPatientId(patientId));
     }
 

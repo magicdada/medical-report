@@ -41,7 +41,7 @@ public class PatientController {
      * @return 患者信息
      */
     @GetMapping("/get/{id}")
-    public ResultMessage<Patient> get(@PathVariable String id) {
+    public ResultMessage<Patient> get(@NotBlank(message = "患者ID不能为空") @PathVariable String id) {
         return ResultUtil.data(patientService.getById(id));
     }
 

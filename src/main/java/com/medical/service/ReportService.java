@@ -65,4 +65,13 @@ public interface ReportService {
      * @return 报告信息
      */
     Report updateStatus(String id, String status, String doctorId);
+
+    /**
+     * 报告鉴权
+     *
+     * @param reportId 报告ID
+     * @param doctorId 医生ID
+     * @return 报告实体
+     */
+    Report validateOwnership(String reportId, String doctorId);
 }

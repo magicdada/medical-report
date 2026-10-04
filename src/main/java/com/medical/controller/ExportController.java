@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.NotBlank;
 
 /**
  * 报告导出接口
@@ -31,7 +32,7 @@ public class ExportController {
      * @param response 响应
      */
     @GetMapping("/pdf/{reportId}")
-    public void exportPdf(@PathVariable String reportId, HttpServletResponse response) {
+    public void exportPdf(@NotBlank(message = "报告ID不能为空") @PathVariable String reportId, HttpServletResponse response) {
         String doctorId = UserContext.getCurrentUserId();
         exportService.exportPdf(reportId, doctorId,response);
     }
@@ -43,7 +44,7 @@ public class ExportController {
      * @param response 响应
      */
     @GetMapping("/word/{reportId}")
-    public void exportWord(@PathVariable String reportId, HttpServletResponse response) {
+    public void exportWord(@NotBlank(message = "报告ID不能为空") @PathVariable String reportId, HttpServletResponse response) {
         String doctorId = UserContext.getCurrentUserId();
         exportService.exportWord(reportId, doctorId,response);
     }
