@@ -142,7 +142,7 @@ public class ExportServiceImpl implements ExportService {
             addFormRow(signTable, "Radiologist's Name:", doctor.getRealName(), borderColor);
             addFormRow(signTable, "Date:", DateUtil.toString(report.getCreateTime()), borderColor);
             addFormRow(signTable, "Signature:", "", borderColor);
-            addQrCodeRow(signTable, "Scan for AI chat:", qrCodeBytes, borderColor);
+            addQrCodeRow(signTable, "Scan the QR code to ask further questions:", qrCodeBytes, borderColor);
             document.add(signTable);
 
             // 底部声明
@@ -237,7 +237,7 @@ public class ExportServiceImpl implements ExportService {
             setTableCell(signTable, 1, 1, DateUtil.toString(report.getCreateTime()));
             setTableCell(signTable, 2, 0, "Signature:");
             setTableCell(signTable, 2, 1, "");
-            setTableCell(signTable, 3, 0, "Scan for AI chat:");
+            setTableCell(signTable, 3, 0, "Scan the QR code to ask further questions:");
             addWordQrCodeCell(signTable, 3, 1, qrCodeBytes);
 
             document.createParagraph();
