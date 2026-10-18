@@ -66,7 +66,7 @@ llm:
   dash-scope:
     base-url: https://dashscope.aliyuncs.com
     api-key: sk-ws-H.PRHXIPM.6ZLc.MEUCIGenoSIhlCGOEHsKTOJMkDLmUU2VOLjJcXpcwmK4uas1AiEA-5_KDnklRLDvq5Twyf7LeyxPjXfJkpALcGvom97Vg-g
-    model: qwen-turbo
+    model: qwen-plus
     timeout-seconds: 60
     temperature: 0.7
     max-tokens: 1500
